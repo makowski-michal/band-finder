@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Band Registration Page</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/style.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script> <!-- jQuery for AJAX requests -->
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Band Registration Page</h1>
+        </div>
+        <form id="band-form" onsubmit="return form_submition(event)"> <!-- call function form_submition when event (button pressed) -->
+        <div class="form-one">
+            <label for="band_username"><span class="required">* </span>Username</label>
+            <input type="text" id="band_username" name="username" pattern="[a-zA-Z][a-zA-Z0-9]{5,}" minlength="6" required placeholder="username">
+            <div id="username-availability-message" class="availability-message"></div>
+            <div class="note">
+                <strong>Note:</strong> At least 6 characters, must start with a letter, no spaces
+            </div>
+        </div>
+        <div class="form-one"> <!-- email, email patterns - HTML 5 -->
+            <label for="band_email"><span class="required">* </span>Email</label>
+            <input type="email" id="band_email" name="email" required placeholder="email@address.com">
+            <div id="email-availability-message" class="availability-message"></div>
+            <div class="note">
+                <strong>Note:</strong> Email patterns - HTML5
+            </div>
+        </div>
+
+        <div class="form-two"> <!-- passoword and confirm password -->
+            <div class="form-one">
+                <label for="band_password"><span class="required">* </span>Password</label>
+                <input type="password" id="band_password" name="password" pattern="(?=.*[A-Z])(?=.*\d)(?=.*[#$%&@!*])[A-Za-z\d#$%&@!*]{8,14}"
+                    minlength="8" maxlength="14" required placeholder="password" onchange="password_strength()">
+                    <!-- ?=. is a positive lookahead, so we check if sth is in the password withoit 'consuming' the letters yet -->
+                    <!-- *[A-Z] at least one big letter, \d means numbers [0-9], after set of look aheads we actually insist on 8-14 characters from enlisted -->
+                <button type="button" class="password-show-hide" onclick="password_visibility('band_password', this)">Show</button>
+                <div id="password-strength-message" class="password-strength-message"></div>
+                <div class="note">
+                    <strong>Note:</strong> Password must be 8-14 characters long and must
+                    contain at least one uppercase Latin letter, one number, and one symbol (e.g., ‘#’, ‘$’, ‘%’, etc.)
+                </div>
+            </div>
+            <div class="form-one">
+                <label for="band_confirm_password"><span class="required">* </span>Confirm Password</label>
+                <input type="password" id="band_confirm_password" name="confirm_password" pattern="(?=.*[A-Z])(?=.*\d)(?=.*[#$%&@!*])[A-Za-z\d#$%&@!*]{8,14}"
+                    minlength="8" maxlength="14" required placeholder="repeat password">
+                <button type="button" class="password-show-hide" onclick="password_visibility('band_confirm_password', this)">Show</button>
+                <div id="band-password-message" class="password-mismatch-message"></div>
+            </div>
+        </div>
+
+        <div class="form-one"> <!-- band name -->
+            <label for="band_name"><span class="required">* </span>Band Name</label>
+            <input type="text" id="band_name" name="band_name" minlength="3" maxlength="30" required placeholder="band name">
+        </div>
+        <div class="form-one"> <!-- music genres -->
+            <label for="music_genres"><span class="required">* </span>Music Genres</label>
+            <input type="text" id="music_genres" name="music_genres" minlength="3" maxlength="200" required placeholder="genres">
+        </div>
+        <div class="form-one"> <!-- band description -->
+            <label for="band_description"><span class="required">* </span>Band Description</label>
+            <textarea id="band_description" name="band_description" minlength="3" maxlength="1000" required placeholder="description of your band"></textarea>
+        </div>
+
+        <div class="form-two">
+            <div class="form-one"> <!-- number of members -->
+                <label for="members_number"><span class="required">* </span>Number of Members</label>
+                <input type="number" id="members_number" name="members_number" min="1" max="10" required placeholder="1-10">
+            </div>
+            <div class="form-one"> <!-- year -->
+                <label for="foundedYear"><span class="required">* </span>Year Founded</label>
+                <input type="number" id="foundedYear" name="foundedYear" min="1960" max="2025" required placeholder="year">
+            </div>
+        </div>
+        <div class="form-two">
+            <div class="form-one"> <!-- city band -->
+                <label for="band_city"><span class="required">* </span>Band City</label>
+                <input type="text" id="band_city" name="band_city" minlength="3" maxlength="30" required placeholder="city">
+            </div>
+            <div class="form-one"> <!-- phone number -->
+                <label for="band_telephone"><span class="required">* </span>Telephone</label>
+                <input type="tel" id="band_telephone" name="telephone" pattern="\d{10,14}" required placeholder="00123456789 (10-14 digits)">
+            </div>
+        </div>
+
+        <div class="form-one"> <!-- webpage link -->
+            <label for="webpage">Webpage Link</label>
+            <input type="url" id="webpage" name="webpage" placeholder="link">
+        </div>
+        <div class="form-one"> <!-- photo link -->
+            <label for="photo">Photo Link</label>
+            <input type="url" id="photo" name="photo" placeholder="link">
+        </div>
+        <button type="submit" class="submit-button">Register</button>
+        <div id="submit-message" class="password-mismatch-message"></div>
+        </form>
+        <div id="json-output"></div>
+    </div>
+
+    <script>
+        function password_visibility(spaceid, button){ // function to change the password to visible/invisible
+            var space = document.getElementById(spaceid);
+            if(space.type === "password"){ // if was inv, === is an identity operator, means is identity equal to "password"
+                space.type="text";
+                button.textContent="Hide";
+            }else{ // if was visible
+                space.type="password";
+                button.textContent="Show";
+            }}
+
+        function is_password_the_same(password_id, confirm_password_id, password_message_id) {
+            var password = document.getElementById(password_id).value;
+            var confirm_pswrd = document.getElementById(confirm_password_id).value;
+            var password_message_div = document.getElementById(password_message_id);
+            if(password !== confirm_pswrd){
+                password_message_div.innerHTML = "Passwords don't match!";
+            }else{
+                password_message_div.innerHTML = "";
+            }}
+
+        document.getElementById("band_password").addEventListener("input", function() {is_password_the_same("band_password", "band_confirm_password", "band-password-message");});
+        document.getElementById("band_confirm_password").addEventListener("input", function() {is_password_the_same("band_password", "band_confirm_password", "band-password-message");});
+
+        function forbidden_sequences(password){
+            var forbidden_words = ["band", "music", "mpanta", "mousiki"];
+            var password_in_lowercase = password.toLowerCase();
+            for(var i = 0; i < forbidden_words.length; i++){
+                if(password_in_lowercase.indexOf(forbidden_words[i]) !== -1){ // if(forbidden_words[i] in password_in_lowercase)
+                    // java script looks for index where forbidden word starts, if it finds none - returns -1
+                    return true; // returns true if forbidden word has been found = weak pswrd
+                }
+            }
+            return false; // false if lack of forbidden words
+        }
+
+        function too_much_numbers(password){ // weak password if at least 40% of the characters are numbers
+            var number_count = 0;
+            for(var i = 0; i < password.length; i++){
+                if(password.charAt(i) >= "0" && password.charAt(i) <= "9"){
+                    number_count++;
+                }
+            }
+            var percentage = number_count/ password.length;
+            if(percentage >= 0.4) {return true;} else {return false;} // true if pswrd is weak
+        }
+
+        function repetitive_characters(password){
+            var char_dict_count = {};
+            for(var i = 0; i < password.length; i++){
+                var char = password.charAt(i);
+                if(char in char_dict_count){
+                    char_dict_count[char]++;
+                }else{
+                    char_dict_count[char] = 1;}
+            }
+            for(var char in char_dict_count){ // msg if one character is at least 50% of the whole password
+                var percentage = char_dict_count[char]/password.length;
+                if(percentage>= 0.5){
+                    return true; // true if password is weak
+                }}
+            return false;
+        }
+
+        function password_is_strong(password){ // strong when at least 1 symbol, 1 uppercase letter, 1 number, and 1 lowercase letter
+            var has_symbol = false;
+            var has_uppercase = false;
+            var has_number = false;
+            var has_lowercase = false;
+            var symbols ="!@#$%^&*+=-_";
+            
+            for(var i = 0; i < password.length; i++){
+                var char = password.charAt(i);
+                if(char >= "a" && char <= "z"){ // is there a lower letter?
+                    has_lowercase = true;
+                }else if(char >= "A" && char <= "Z"){ // is there a upper letter?
+                    has_uppercase = true;
+                }else if(char >= "0" && char <= "9"){ // is there a num?
+                    has_number = true;
+                }else if(symbols.indexOf(char) !== -1){ // is there a symbol?
+                    has_symbol = true;
+                }
+            }
+            return has_lowercase && has_uppercase && has_number && has_symbol; // has all of them = strong
+        }
+
+        function password_strength() {
+            var password = document.getElementById("band_password").value; // get string of password
+            var message_set_div = document.getElementById("password-strength-message"); // div where to display msg
+            
+            if(forbidden_sequences(password)){
+                message_set_div.innerHTML = "Weak password: contains forbidden words";
+                return "weak";
+            }
+            if(too_much_numbers(password)){
+                message_set_div.innerHTML = "Weak password: too many numbers (≥40%)";
+                return "weak";
+            }
+            if(repetitive_characters(password)){
+                message_set_div.innerHTML = "Weak password: too many repeated characters (≥50%)";
+                return "weak";
+            }
+            if(password_is_strong(password)){
+                message_set_div.innerHTML = "Strong password";
+                return "strong";
+            }
+            message_set_div.innerHTML = "Medium password";
+            return "medium";}
+
+        async function form_submition(event){
+            event.preventDefault(); // stop the form from submitting normally (page reload)
+            var pass_strength = password_strength(); // check password strength before submitting
+            
+            if(pass_strength === "weak"){ // if password is weak, stop the registration
+                document.getElementById("submit-message").innerHTML = "can't submit form, password is too weak";
+                document.getElementById("submit-message").style.color = "red";
+                return false;
+            }
+            
+            // check again if passwords match before sending to server
+            var password = document.getElementById("band_password").value;
+            var confirm_password = document.getElementById("band_confirm_password").value;
+            if(password !== confirm_password){
+                document.getElementById("submit-message").innerHTML = "passwords don't match";
+                document.getElementById("submit-message").style.color = "red";
+                return false;
+            }
+
+            // create object with all form values (except confirm_password)
+            var form_data= {};
+            var inputs =document.getElementById("band-form").elements;
+            // read all <input> values from the form
+            for(var i = 0; i < inputs.length; i++){
+                var input = inputs[i];
+                if(input.name && input.name !== "confirm_password"){ // only add fields that have a name AND are not confirm_password
+                    form_data[input.name] = input.value;
+                }
+            }
+
+            // send the registration data to server as JSON
+            $.ajax({
+                url: '/RegistrationAndLogin/RegisterBand',// servlet URL
+                type: 'POST',
+                contentType: 'application/json', // we send JSON
+                data: JSON.stringify(form_data), // convert JS object to JSON text
+                success: function(response){ // if registration was successful
+                    document.getElementById("submit-message").innerHTML = "registration success!";
+                    document.getElementById("submit-message").style.color = "green";
+                    // show JSON response from server for confirmation
+                    document.getElementById("json-output").innerHTML = "<h3>server response:</h3><pre>" + JSON.stringify(response, null, 2) + "</pre>";
+                },
+                error: function(xhr){ // if server responded with error
+                    var error_message = "registration failed";
+                    
+                    if(xhr.status === 403){// status 403 = username or email already exists in database
+                        try{
+                            var error_response = JSON.parse(xhr.responseText);
+                            error_message = error_response.error || "username or email already exists";
+                        } catch(e){
+                            error_message = "username or email already exists";
+                        }
+                    }else if(xhr.status === 400){ // status 400 = missing required fields or invalid data
+                        error_message = "invalid data provided";
+                    }else{ // other server errors (500, etc)
+                        error_message = "server error: " + xhr.status;
+                    }
+                    // show error message in red
+                    document.getElementById("submit-message").innerHTML = error_message;
+                    document.getElementById("submit-message").style.color = "red";
+                    // show detailed server error for debugging
+                    if(xhr.responseText) {
+                        document.getElementById("json-output").innerHTML = "<h3>server error:</h3><pre>" + xhr.responseText + "</pre>";
+                    }
+                }
+            });
+            
+            return false; // stop browser from reloading the page
+        }
+
+        // ajax functions for checking username and email availability
+        function check_username_availability() {
+            var username = document.getElementById("band_username").value;
+            var message_div = document.getElementById("username-availability-message");
+            
+            if(username.length < 6){ // if username is too short, clear the message
+                message_div.innerHTML = "";
+                return;
+            }
+            // send a request to check if username exists
+            $.ajax({
+                url: '/RegistrationAndLogin/checkUsername',
+                type: 'GET',
+                data: {username: username},
+                success: function(response){
+                    if(response.available){
+                        message_div.innerHTML = "username is available";
+                        message_div.style.color = "green";
+                    }else{
+                        message_div.innerHTML = "username is already taken";
+                        message_div.style.color = "red";
+                    }
+                },
+                error: function(){
+                    message_div.innerHTML = "error checking username";
+                    message_div.style.color = "red";
+                }
+            });
+        }
+
+        function check_email_availability(){
+            var email = document.getElementById("band_email").value;
+            var message_div = document.getElementById("email-availability-message");
+            
+            if(email.length === 0){ // if empty clear the message
+                message_div.innerHTML = "";
+                return;
+            }
+            // send a request to check email
+            $.ajax({
+                url: '/RegistrationAndLogin/checkEmail',
+                type: 'GET',
+                data: {email: email },
+                success: function(response){
+                    if(response.available){
+                        message_div.innerHTML = "email is available";
+                        message_div.style.color = "green";
+                    } else {
+                        message_div.innerHTML = "email is already in use";
+                        message_div.style.color = "red";
+                    }
+                },
+                error: function(){
+                    message_div.innerHTML = "error checking email";
+                    message_div.style.color = "red";
+                }
+            });
+        }
+        
+        // event listeners for real-time checking
+        document.getElementById("band_username").addEventListener("input", check_username_availability);
+        document.getElementById("band_username").addEventListener("blur", check_username_availability);
+        document.getElementById("band_email").addEventListener("input", check_email_availability);
+        document.getElementById("band_email").addEventListener("blur", check_email_availability);
+    </script>
+</body>
+</html>

@@ -1,0 +1,773 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Registration Page</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/style.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script> <!-- jQuery for AJAX requests -->
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>User Registration Page</h1>
+        </div>
+        <form id="user-form" onsubmit="return form_submition(event)"> <!-- call function form_submition when event (button pressed) -->
+        <div class="form-one"> <!-- username -->
+            <label for="username"><span class="required">* </span>Username</label>
+            <input type="text" id="username" name="username" pattern="[a-zA-Z][a-zA-Z0-9]{5,}" minlength="6" required placeholder="username">
+            <div id="username-availability-message" class="availability-message"></div> <!-- A3 EX1 -->
+            <!-- {5,} means last expression times at least 5 -->
+            <div class="note"><strong>Note:</strong> At least 6 characters, username has to start with a letter</div>
+        </div>
+        <div class="form-one"> <!-- email, email patterns - HTML 5 -->
+            <label for="email"><span class="required">* </span>Email</label>
+            <input type="email" id="email" name="email" required placeholder="email@address.com">
+            <div id="email-availability-message" class="availability-message"></div> <!-- A3 EX1 -->
+            <div class="note"><strong>Note:</strong> Email patterns - HTML5</div>
+        </div>
+        <div class="form-two"> <!-- passoword and confirm password -->
+            <div class="form-one">
+                <label for="password"><span class="required">* </span>Password</label>
+                <input type="password" id="password" name="password" pattern="(?=.*[A-Z])(?=.*\d)(?=.*[#$%&@!*])[A-Za-z\d#$%&@!*]{8,14}"
+                    minlength="8" maxlength="14" required placeholder="password" onchange="password_strength()">
+                    <!-- ?=. is a positive lookahead, so we check if sth is in the password withoit 'consuming' the letters yet -->
+                    <!-- *[A-Z] at least one big letter, \d means numbers [0-9], after set of look aheads we actually insist on 8-14 characters from enlisted -->
+                <button type="button" class="password-show-hide" onclick="password_visibility('password', this)">Show</button>
+                <div id="password-strength-message" class="password-strength-message"></div>    
+                <div class="note">
+                    <strong>Note:</strong> Password must be 8-14 characters long and must
+                    contain at least one uppercase Latin letter, one number, and one symbol (e.g., ‘#’, ‘$’, ‘%’, etc.)
+                </div>
+            </div>
+            <div class="form-one">
+                <label for="confirm_password"><span class="required">* </span>Confirm Password</label>
+                <input type="password" id="confirm_password" name="confirm_password" pattern="(?=.*[A-Z])(?=.*\d)(?=.*[#$%&@!*])[A-Za-z\d#$%&@!*]{8,14}"
+                    minlength="8" maxlength="14" required placeholder="repeat password">
+                <button type="button" class="password-show-hide" onclick="password_visibility('confirm_password', this)">Show</button>
+                <div id="user-password-message" class="password-mismatch-message"></div>
+            </div>
+        </div>
+        <div class="form-two"> <!-- name and surname -->
+            <div class="form-one">
+                <label for="firstname"><span class="required">* </span>First Name</label>
+                <input type="text" id="firstname" name="firstname" pattern="[a-zA-Z\s]{3,30}" minlength="3" maxlength="30" required placeholder="first name">
+            </div>
+            <div class="form-one">
+                <label for="lastname"><span class="required">* </span>Last Name</label>
+                <input type="text" id="lastname" name="lastname" pattern="[a-zA-Z\s]{3,30}" minlength="3" maxlength="30" required placeholder="last name">
+            </div>
+        </div>
+        <div class="form-one"> <!--- birth date -->
+            <label for="birthdate"><span class="required">* </span>Date of Birth</label>
+            <input type="date" id="birthdate" name="birthdate" min="1920-01-01" max="2011-12-31" value="1980-01-01" required>
+        </div>
+
+        <div class="form-one"> <!-- gender radio -->
+            <label><span class="required">* </span>Gender</label>
+            <div class="radio-set">
+                <div class="radio-choice">
+                    <input type="radio" id="male" name="gender" value="male" required>
+                    <label for="male">Male</label>
+                </div>
+                <div class="radio-choice">
+                    <input type="radio" id="female" name="gender" value="female" required>
+                    <label for="female">Female</label>
+                </div>
+                <div class="radio-choice">
+                    <input type="radio" id="other" name="gender" value="other" required>
+                    <label for="other">Other</label>
+                </div>
+            </div>
+        </div>
+
+        <div class="form-one"> <!-- countries -->
+            <label for="country"><span class="required">* </span>Country</label>
+            <select id="country" name="country" required>
+                <option value="">Select a Country</option>
+                <option value="Afghanistan">Afghanistan</option>
+                <option value="Åland Islands">Åland Islands</option>
+                <option value="Albania">Albania</option>
+                <option value="Algeria">Algeria</option>
+                <option value="American Samoa">American Samoa</option>
+                <option value="Andorra">Andorra</option>
+                <option value="Angola">Angola</option>
+                <option value="Anguilla">Anguilla</option>
+                <option value="Antarctica">Antarctica</option>
+                <option value="Antigua and Barbuda">Antigua & Barbuda</option>
+                <option value="Argentina">Argentina</option>
+                <option value="Armenia">Armenia</option>
+                <option value="Aruba">Aruba</option>
+                <option value="Australia">Australia</option>
+                <option value="Austria">Austria</option>
+                <option value="Azerbaijan">Azerbaijan</option>
+                <option value="Bahamas">Bahamas</option>
+                <option value="Bahrain">Bahrain</option>
+                <option value="Bangladesh">Bangladesh</option>
+                <option value="Barbados">Barbados</option>
+                <option value="Belarus">Belarus</option>
+                <option value="Belgium">Belgium</option>
+                <option value="Belize">Belize</option>
+                <option value="Benin">Benin</option>
+                <option value="Bermuda">Bermuda</option>
+                <option value="Bhutan">Bhutan</option>
+                <option value="Bolivia (Plurinational State of)">Bolivia</option>
+                <option value="Bosnia and Herzegovina">Bosnia & Herzegovina</option>
+                <option value="Botswana">Botswana</option>
+                <option value="Bouvet Island">Bouvet Island</option>
+                <option value="Brazil">Brazil</option>
+                <option value="British Indian Ocean Territory">British Indian Ocean Territory</option>
+                <option value="Brunei Darussalam">Brunei</option>
+                <option value="Bulgaria">Bulgaria</option>
+                <option value="Burkina Faso">Burkina Faso</option>
+                <option value="Burundi">Burundi</option>
+                <option value="Cabo Verde">Cape Verde</option>
+                <option value="Cambodia">Cambodia</option>
+                <option value="Cameroon">Cameroon</option>
+                <option value="Canada">Canada</option>
+                <option value="Caribbean Netherlands">Caribbean Netherlands</option>
+                <option value="Cayman Islands">Cayman Islands</option>
+                <option value="Central African Republic">Central African Republic</option>
+                <option value="Chad">Chad</option>
+                <option value="Chile">Chile</option>
+                <option value="China">China</option>
+                <option value="Christmas Island">Christmas Island</option>
+                <option value="Cocos (Keeling) Islands">Cocos (Keeling) Islands</option>
+                <option value="Colombia">Colombia</option>
+                <option value="Comoros">Comoros</option>
+                <option value="Congo">Congo - Brazzaville</option>
+                <option value="Congo, Democratic Republic of the">Congo - Kinshasa</option>
+                <option value="Cook Islands">Cook Islands</option>
+                <option value="Costa Rica">Costa Rica</option>
+                <option value="Croatia">Croatia</option>
+                <option value="Cuba">Cuba</option>
+                <option value="Curaçao">Curaçao</option>
+                <option value="Cyprus">Cyprus</option>
+                <option value="Czech Republic">Czechia</option>
+                <option value="Côte d'Ivoire">Côte d’Ivoire</option>
+                <option value="Denmark">Denmark</option>
+                <option value="Djibouti">Djibouti</option>
+                <option value="Dominica">Dominica</option>
+                <option value="Dominican Republic">Dominican Republic</option>
+                <option value="Ecuador">Ecuador</option>
+                <option value="Egypt">Egypt</option>
+                <option value="El Salvador">El Salvador</option>
+                <option value="Equatorial Guinea">Equatorial Guinea</option>
+                <option value="Eritrea">Eritrea</option>
+                <option value="Estonia">Estonia</option>
+                <option value="Eswatini (Swaziland)">Eswatini</option>
+                <option value="Ethiopia">Ethiopia</option>
+                <option value="Falkland Islands (Malvinas)">Falkland Islands</option>
+                <option value="Faroe Islands">Faroe Islands</option>
+                <option value="Fiji">Fiji</option>
+                <option value="Finland">Finland</option>
+                <option value="France">France</option>
+                <option value="French Guiana">French Guiana</option>
+                <option value="French Polynesia">French Polynesia</option>
+                <option value="French Southern Territories">French Southern Territories</option>
+                <option value="Gabon">Gabon</option>
+                <option value="Gambia">Gambia</option>
+                <option value="Georgia">Georgia</option>
+                <option value="Germany">Germany</option>
+                <option value="Ghana">Ghana</option>
+                <option value="Gibraltar">Gibraltar</option>
+                <option value="Greece">Greece</option>
+                <option value="Greenland">Greenland</option>
+                <option value="Grenada">Grenada</option>
+                <option value="Guadeloupe">Guadeloupe</option>
+                <option value="Guam">Guam</option>
+                <option value="Guatemala">Guatemala</option>
+                <option value="Guernsey">Guernsey</option>
+                <option value="Guinea">Guinea</option>
+                <option value="Guinea-Bissau">Guinea-Bissau</option>
+                <option value="Guyana">Guyana</option>
+                <option value="Haiti">Haiti</option>
+                <option value="Heard Island and Mcdonald Islands">Heard & McDonald Islands</option>
+                <option value="Honduras">Honduras</option>
+                <option value="Hong Kong">Hong Kong SAR China</option>
+                <option value="Hungary">Hungary</option>
+                <option value="Iceland">Iceland</option>
+                <option value="India">India</option>
+                <option value="Indonesia">Indonesia</option>
+                <option value="Iran">Iran</option>
+                <option value="Iraq">Iraq</option>
+                <option value="Ireland">Ireland</option>
+                <option value="Isle of Man">Isle of Man</option>
+                <option value="Israel">Israel</option>
+                <option value="Italy">Italy</option>
+                <option value="Jamaica">Jamaica</option>
+                <option value="Japan">Japan</option>
+                <option value="Jersey">Jersey</option>
+                <option value="Jordan">Jordan</option>
+                <option value="Kazakhstan">Kazakhstan</option>
+                <option value="Kenya">Kenya</option>
+                <option value="Kiribati">Kiribati</option>
+                <option value="Korea, North">North Korea</option>
+                <option value="Korea, South">South Korea</option>
+                <option value="Kosovo">Kosovo</option>
+                <option value="Kuwait">Kuwait</option>
+                <option value="Kyrgyzstan">Kyrgyzstan</option>
+                <option value="Lao People's Democratic Republic">Laos</option>
+                <option value="Latvia">Latvia</option>
+                <option value="Lebanon">Lebanon</option>
+                <option value="Lesotho">Lesotho</option>
+                <option value="Liberia">Liberia</option>
+                <option value="Libya">Libya</option>
+                <option value="Liechtenstein">Liechtenstein</option>
+                <option value="Lithuania">Lithuania</option>
+                <option value="Luxembourg">Luxembourg</option>
+                <option value="Macao">Macao SAR China</option>
+                <option value="Macedonia North">North Macedonia</option>
+                <option value="Madagascar">Madagascar</option>
+                <option value="Malawi">Malawi</option>
+                <option value="Malaysia">Malaysia</option>
+                <option value="Maldives">Maldives</option>
+                <option value="Mali">Mali</option>
+                <option value="Malta">Malta</option>
+                <option value="Marshall Islands">Marshall Islands</option>
+                <option value="Martinique">Martinique</option>
+                <option value="Mauritania">Mauritania</option>
+                <option value="Mauritius">Mauritius</option>
+                <option value="Mayotte">Mayotte</option>
+                <option value="Mexico">Mexico</option>
+                <option value="Micronesia">Micronesia</option>
+                <option value="Moldova">Moldova</option>
+                <option value="Monaco">Monaco</option>
+                <option value="Mongolia">Mongolia</option>
+                <option value="Montenegro">Montenegro</option>
+                <option value="Montserrat">Montserrat</option>
+                <option value="Morocco">Morocco</option>
+                <option value="Mozambique">Mozambique</option>
+                <option value="Myanmar (Burma)">Myanmar (Burma)</option>
+                <option value="Namibia">Namibia</option>
+                <option value="Nauru">Nauru</option>
+                <option value="Nepal">Nepal</option>
+                <option value="Netherlands">Netherlands</option>
+                <option value="Netherlands Antilles">Curaçao</option>
+                <option value="New Caledonia">New Caledonia</option>
+                <option value="New Zealand">New Zealand</option>
+                <option value="Nicaragua">Nicaragua</option>
+                <option value="Niger">Niger</option>
+                <option value="Nigeria">Nigeria</option>
+                <option value="Niue">Niue</option>
+                <option value="Norfolk Island">Norfolk Island</option>
+                <option value="Northern Mariana Islands">Northern Mariana Islands</option>
+                <option value="Norway">Norway</option>
+                <option value="Oman">Oman</option>
+                <option value="Pakistan">Pakistan</option>
+                <option value="Palau">Palau</option>
+                <option value="Palestine">Palestinian Territories</option>
+                <option value="Panama">Panama</option>
+                <option value="Papua New Guinea">Papua New Guinea</option>
+                <option value="Paraguay">Paraguay</option>
+                <option value="Peru">Peru</option>
+                <option value="Philippines">Philippines</option>
+                <option value="Pitcairn Islands">Pitcairn Islands</option>
+                <option value="Poland">Poland</option>
+                <option value="Portugal">Portugal</option>
+                <option value="Puerto Rico">Puerto Rico</option>
+                <option value="Qatar">Qatar</option>
+                <option value="Reunion">Réunion</option>
+                <option value="Romania">Romania</option>
+                <option value="Russian Federation">Russia</option>
+                <option value="Rwanda">Rwanda</option>
+                <option value="Saint Barthelemy">St. Barthélemy</option>
+                <option value="Saint Helena">St. Helena</option>
+                <option value="Saint Kitts and Nevis">St. Kitts & Nevis</option>
+                <option value="Saint Lucia">St. Lucia</option>
+                <option value="Saint Martin">St. Martin</option>
+                <option value="Saint Pierre and Miquelon">St. Pierre & Miquelon</option>
+                <option value="Saint Vincent and the Grenadines">St. Vincent & Grenadines</option>
+                <option value="Samoa">Samoa</option>
+                <option value="San Marino">San Marino</option>
+                <option value="Sao Tome and Principe">São Tomé & Príncipe</option>
+                <option value="Saudi Arabia">Saudi Arabia</option>
+                <option value="Senegal">Senegal</option>
+                <option value="Serbia">Serbia</option>
+                <option value="Serbia and Montenegro">Serbia</option>
+                <option value="Seychelles">Seychelles</option>
+                <option value="Sierra Leone">Sierra Leone</option>
+                <option value="Singapore">Singapore</option>
+                <option value="Sint Maarten">Sint Maarten</option>
+                <option value="Slovakia">Slovakia</option>
+                <option value="Slovenia">Slovenia</option>
+                <option value="Solomon Islands">Solomon Islands</option>
+                <option value="Somalia">Somalia</option>
+                <option value="South Africa">South Africa</option>
+                <option value="South Georgia and the South Sandwich Islands">South Georgia & South Sandwich Islands</option>
+                <option value="South Sudan">South Sudan</option>
+                <option value="Spain">Spain</option>
+                <option value="Sri Lanka">Sri Lanka</option>
+                <option value="Sudan">Sudan</option>
+                <option value="Suriname">Suriname</option>
+                <option value="Svalbard and Jan Mayen">Svalbard & Jan Mayen</option>
+                <option value="Sweden">Sweden</option>
+                <option value="Switzerland">Switzerland</option>
+                <option value="Syria">Syria</option>
+                <option value="Taiwan">Taiwan</option>
+                <option value="Tajikistan">Tajikistan</option>
+                <option value="Tanzania">Tanzania</option>
+                <option value="Thailand">Thailand</option>
+                <option value="Timor-Leste">Timor-Leste</option>
+                <option value="Togo">Togo</option>
+                <option value="Tokelau">Tokelau</option>
+                <option value="Tonga">Tonga</option>
+                <option value="Trinidad and Tobago">Trinidad & Tobago</option>
+                <option value="Tunisia">Tunisia</option>
+                <option value="Turkey (Türkiye)">Türkiye</option>
+                <option value="Turkmenistan">Turkmenistan</option>
+                <option value="Turks and Caicos Islands">Turks & Caicos Islands</option>
+                <option value="Tuvalu">Tuvalu</option>
+                <option value="U.S. Outlying Islands">U.S. Outlying Islands</option>
+                <option value="Uganda">Uganda</option>
+                <option value="Ukraine">Ukraine</option>
+                <option value="United Arab Emirates">United Arab Emirates</option>
+                <option value="United Kingdom">United Kingdom</option>
+                <option value="United States">United States</option>
+                <option value="Uruguay">Uruguay</option>
+                <option value="Uzbekistan">Uzbekistan</option>
+                <option value="Vanuatu">Vanuatu</option>
+                <option value="Vatican City Holy See">Vatican City</option>
+                <option value="Venezuela">Venezuela</option>
+                <option value="Vietnam">Vietnam</option>
+                <option value="Virgin Islands, British">British Virgin Islands</option>
+                <option value="Virgin Islands, U.S">U.S. Virgin Islands</option>
+                <option value="Wallis and Futuna">Wallis & Futuna</option>
+                <option value="Western Sahara">Western Sahara</option>
+                <option value="Yemen">Yemen</option>
+                <option value="Zambia">Zambia</option>
+                <option value="Zimbabwe">Zimbabwe</option>
+            </select>
+        </div>
+
+        <div class="form-one"> <!-- city -->
+            <label for="city"><span class="required">* </span>City of Residence</label>
+            <input type="text" id="city" name="city" minlength="3" maxlength="30" required placeholder="your city" onchange="hide_map_container()"> <!-- if city changes - map dissapears -->
+        </div>
+        <div class="form-one"> <!-- address -->
+            <label for="address"><span class="required">* </span>Address</label>
+            <input type="text" id="address" name="address" minlength="10" maxlength="150" required placeholder="street, number, post-code">
+            <input type="hidden" id="lat" name="lat"> <!-- hidden fields used to store latitude and longitude after 'geocoding' the usrs address -->
+            <input type="hidden" id="lon" name="lon">
+        </div>
+        <!-- verify location button -->
+        <button type="button" class="password-show-hide" onclick="verify_location()">Verify location</button>
+        <button type="button" id="show-map-button" class="password-show-hide" onclick="show_map()" style="display:none;">Show map</button> <!-- same visual class as password-show-hide -->
+        <div id="location-message" class="password-strength-message"></div>
+        <div class="form-one"> <!-- phone number -->
+            <label for="telephone"><span class="required">* </span>Telephone</label>
+            <input type="tel" id="telephone" name="telephone" pattern="\d{10,14}" required placeholder="00123456789 (10-14 digits)">
+        </div>
+        <button type="submit" class="submit-button">Register</button>
+        <div id="submit-message" class="password-mismatch-message"></div>
+        </form>
+        <div id="json-output"></div>
+    </div>
+
+    <script src="http://www.openlayers.org/api/OpenLayers.js"></script>
+    <script>
+        function password_visibility(spaceid, button){ // function to change the password to visible/invisible
+            var space = document.getElementById(spaceid);
+            if(space.type === "password"){ // if was inv, === is an identity operator, means is identity equal to "password"
+                space.type="text";
+                button.textContent="Hide";
+            }else{ // if was visible
+                space.type="password";
+                button.textContent="Show";
+            }}
+
+        function is_password_the_same(password_id, confirm_password_id, password_message_id) {
+            var password = document.getElementById(password_id).value;
+            var confirm_pswrd = document.getElementById(confirm_password_id).value;
+            var password_message_div = document.getElementById(password_message_id);
+            if(password !== confirm_pswrd){
+                password_message_div.innerHTML = "Passwords don't match!";
+            }else{
+                password_message_div.innerHTML = "";
+            }}
+
+        document.getElementById("password").addEventListener("input", function() {is_password_the_same("password", "confirm_password", "user-password-message");});
+        document.getElementById("confirm_password").addEventListener("input", function() {is_password_the_same("password", "confirm_password", "user-password-message");});
+
+        function forbidden_sequences(password){
+            var forbidden_words = ["band", "music", "mpanta", "mousiki"];
+            var password_in_lowercase = password.toLowerCase();
+            for(var i = 0; i < forbidden_words.length; i++){
+                if(password_in_lowercase.indexOf(forbidden_words[i]) !== -1){ // if(forbidden_words[i] in password_in_lowercase)
+                    // java script looks for index where forbidden word starts, if it finds none - returns -1
+                    return true; // returns true if forbidden word has been found = weak pswrd
+                }
+            }
+            return false; // false if lack of forbidden words
+        }
+
+        function too_much_numbers(password){ // weak password if at least 40% of the characters are numbers
+            var number_count = 0;
+            for(var i = 0; i < password.length; i++){
+                if(password.charAt(i) >= "0" && password.charAt(i) <= "9"){
+                    number_count++;
+                }
+            }
+            var percentage = number_count/ password.length;
+            if(percentage >= 0.4) {return true;} else {return false;} // true if pswrd is weak
+        }
+
+        function repetitive_characters(password){
+            var char_dict_count = {};
+            for(var i = 0; i < password.length; i++){
+                var char = password.charAt(i);
+                if(char in char_dict_count){
+                    char_dict_count[char]++;
+                }else{
+                    char_dict_count[char] = 1;}
+            }
+            for(var char in char_dict_count){ // msg if one character is at least 50% of the whole password
+                var percentage = char_dict_count[char]/password.length;
+                if(percentage>= 0.5){
+                    return true; // true if password is weak
+                }}
+            return false;
+        }
+
+        function password_is_strong(password){ // strong when at least 1 symbol, 1 uppercase letter, 1 number, and 1 lowercase letter
+            var has_symbol = false;
+            var has_uppercase = false;
+            var has_number = false;
+            var has_lowercase = false;
+            var symbols ="!@#$%^&*+=-_";
+            
+            for(var i = 0; i < password.length; i++){
+                var char = password.charAt(i);
+                if(char >= "a" && char <= "z"){ // is there a lower letter?
+                    has_lowercase = true;
+                }else if(char >= "A" && char <= "Z"){ // is there a upper letter?
+                    has_uppercase = true;
+                }else if(char >= "0" && char <= "9"){ // is there a num?
+                    has_number = true;
+                }else if(symbols.indexOf(char) !== -1){ // is there a symbol?
+                    has_symbol = true;
+                }
+            }
+            return has_lowercase && has_uppercase && has_number && has_symbol; // has all of them = strong
+        }
+
+        function password_strength() {
+            var password = document.getElementById("password").value; // get string of password
+            var message_set_div = document.getElementById("password-strength-message"); // div where to display msg
+            
+            if(forbidden_sequences(password)){
+                message_set_div.innerHTML = "Weak password: contains forbidden words";
+                return "weak";
+            }
+            if(too_much_numbers(password)){
+                message_set_div.innerHTML = "Weak password: too many numbers (>=40%)";
+                return "weak";
+            }
+            if(repetitive_characters(password)){
+                message_set_div.innerHTML = "Weak password: too many repeated characters (>=50%)";
+                return "weak";
+            }
+            if(password_is_strong(password)){
+                message_set_div.innerHTML = "Strong password";
+                return "strong";
+            }
+            message_set_div.innerHTML = "Medium password";
+            return "medium";}      
+
+        // verify location code
+        var verified_lat = null; // latitude
+        var verified_lon = null; // longtitude, eg. 12.453' & 78.192
+        var location_verified = false;
+        var map = null; // in case map point changes we will reset map details each time and generate it again
+
+        function verify_location(){
+            var country = document.getElementById("country").value;
+            var city = document.getElementById("city").value;
+            var address = document.getElementById("address").value;
+            var location_message_div = document.getElementById("location-message");
+            
+            if(country !== "Greece"){ // is the location Greece?
+                location_message_div.innerHTML = "Service is only available in Greece at the moment";
+                location_verified = false;
+                verified_lat = null;
+                verified_lon = null;
+                document.getElementById("show-map-button").style.display = "none";
+                return;
+            }
+            
+            var full_address = address + " " + city + " " + country; // full adress string, which we will pass to the api site in order to look for full adress
+            const xhr = new XMLHttpRequest(); // ajax request to rapid api, initialize 8_1.RAPID_api_EN.pdf
+            
+            xhr.addEventListener("readystatechange", function(){
+                if(this.readyState === this.DONE){
+                    try {
+                        const response = JSON.parse(xhr.responseText); // 8_1.RAPID_api_EN.pdf
+                        if(!response || response.length === 0){ // check if response is empty or null
+                            location_message_div.innerHTML = "Location has not been found. Check your address";
+                            location_verified = false;
+                            verified_lat = null;
+                            verified_lon = null;
+                            document.getElementById("show-map-button").style.display = "none";
+                        }else{ // location found - get the first result
+                            var location_data = response[0];
+                            verified_lat = parseFloat(location_data.lat); // convert to float for ex2 b)
+                            verified_lon = parseFloat(location_data.lon);
+                            location_verified = true;
+                            document.getElementById("show-map-button").style.display = "block";
+                            location_message_div.innerHTML = "Location verified: " + location_data.display_name;
+                        }
+                    } catch(e) { // if error - no response
+                        location_message_div.innerHTML = "Service response is empty, current location is not recognized";
+                        location_verified = false;
+                        verified_lat = null;
+                        verified_lon = null;
+                        document.getElementById("show-map-button").style.display = "none";
+                    }
+                }
+            });
+            xhr.open("GET", "https://forward-reverse-geocoding.p.rapidapi.com/v1/search?q="+encodeURIComponent(full_address)+"&accept-language=en&polygon_threshold=0.0");
+            xhr.setRequestHeader("x-rapidapi-key", "6c6bf8d1e1mshc1ca0e713f01b86p1003bdjsn0e24e4fdb063"); // api-key
+            xhr.setRequestHeader("x-rapidapi-host", "forward-reverse-geocoding.p.rapidapi.com");
+            xhr.send();
+        }
+        
+        function hide_map_container(){
+            var map_container = document.getElementById("map-container");
+            if(map_container && map_container.parentNode){ // if there is a map container and it is shown on the website (div, body really contains it)
+                map_container.parentNode.removeChild(map_container); // we delete them
+            }
+            document.getElementById("show-map-button").style.display = "none"; // hide show-map button
+            verified_lat = null; // resets map variables
+            verified_lon = null;
+            location_verified = false;
+            map = null;}
+        
+        function setPosition(lat, lon){
+            // define the source coordinate system (gps coordinates in degrees)
+            var fromProjection = new OpenLayers.Projection("EPSG:4326"); // // Transform from WGS 1984
+            // define the target coordinate system (used by openlayers maps)
+            var toProjection = new OpenLayers.Projection("EPSG:900913"); // to Spherical Mercator Projection
+            // create a longitude/latitude object and transform it, from wgs84 (epsg:4326) to spherical mercator (epsg:900913)
+            var position = new OpenLayers.LonLat(lon, lat).transform(fromProjection, toProjection); // 9.2_OSM Maps_EN.pdf
+            // return the transformed coordinates ready to use on the map
+            return position;
+        }
+        
+        function initialize_map(){
+            var map = new OpenLayers.Map("Map"); // 9.2_OSM Maps_EN.pdf
+            var mapnik = new OpenLayers.Layer.OSM(); // adds OpenStreetMap layer - visible map background
+            map.addLayer(mapnik);
+            return map;
+        }
+        
+        function add_marker(mapObject, lat, lon){
+            var position = setPosition(lat, lon);
+            var markers = new OpenLayers.Layer.Markers("Markers"); // creates new layer for markers
+            mapObject.addLayer(markers); // adds new layer to the map
+
+            var marker = new OpenLayers.Marker(position); // creates a single marker at given postion
+            markers.addMarker(marker); // adds the marker to markers layer
+            return position;
+        }
+        
+        function show_map(){
+            if(!location_verified || verified_lat === null || verified_lon === null){ // show map only when location exists (is verified in other words)
+                return;}
+
+            if( document.getElementById("map-container") ) { document.getElementById("map-container").remove() } // if map already exists remove it
+
+            map_container = document.createElement("div"); // create new map container each time user wants to see the map (when he changes the city it has to disappear anyways)
+            map_container.id = "map-container";
+            map_container.style.display = "block"; // visibility
+            
+            var map_div = document.createElement("div"); 
+            map_div.id = "Map"; // this id will be used by OpenLayers.Map()
+            map_div.style.height = "600px";
+            map_div.style.width = "700px";
+            
+            map_container.appendChild(map_div); // set map_div to map-container
+            var location_msg = document.getElementById("location-message");
+            location_msg.parentNode.insertBefore(map_container, location_msg.nextSibling); // insert map_container right AFTER location-message by inserting it BEFORE its next sibling
+        
+            map = initialize_map();
+            var position = add_marker(map, verified_lat, verified_lon); // adding marker at the position of verified coordinates
+            map.setCenter(position, 15); // 9.2_OSM Maps_EN.pdf
+        }
+
+        async function form_submition(event){
+            event.preventDefault(); // stop the form from submitting normally (page reload)
+            var pass_strength = password_strength(); // check password strength before submitting
+            
+            if(pass_strength === "weak"){  // if password is weak, stop the registration
+                document.getElementById("submit-message").innerHTML = "can't submit form, password is too weak";
+                document.getElementById("submit-message").style.color = "red";
+                return false;
+            }
+            
+            // check again if passwords match before sending to server
+            var password = document.getElementById("password").value;
+            var confirm_password = document.getElementById("confirm_password").value;
+            if(password !== confirm_password){
+                document.getElementById("submit-message").innerHTML = "passwords don't match";
+                document.getElementById("submit-message").style.color = "red";
+                return false;
+            }
+            
+            // get coordinates (either from verify button or geocode now)
+            var final_lat = null;
+            var final_lon = null;
+            
+            if(location_verified && verified_lat !== null && verified_lon !== null) {
+                // user already verified - use those coordinates
+                final_lat = verified_lat;
+                final_lon = verified_lon;
+            } else {
+                // user didn't verify - geocode now automatically
+                var address = document.getElementById("address").value;
+                var city = document.getElementById("city").value;
+                var country = document.getElementById("country").value;
+                var full_address = address + ", " + city + ", " + country;
+                
+                // try to geocode using nominatim api
+                var geocode_url = "https://nominatim.openstreetmap.org/search?format=json&q=" + encodeURIComponent(full_address);
+                var geocode_response = await $.ajax({url: geocode_url, type: 'GET'}).catch(function(){return null;});
+                
+                if(geocode_response && geocode_response.length > 0) {
+                    final_lat = parseFloat(geocode_response[0].lat);
+                    final_lon = parseFloat(geocode_response[0].lon);
+                } else {
+                    // if exact address not found, try just city + country
+                    var city_url = "https://nominatim.openstreetmap.org/search?format=json&q=" + encodeURIComponent(city + ", " + country);
+                    var city_response = await $.ajax({url: city_url, type: 'GET'}).catch(function(){return null;});
+                    
+                    if(city_response && city_response.length > 0) {
+                        final_lat = parseFloat(city_response[0].lat);
+                        final_lon = parseFloat(city_response[0].lon);
+                    }
+                }
+            }
+            
+            // set lat/lon in hidden fields (will be null if geocoding failed)
+            document.getElementById("lat").value = final_lat || "";
+            document.getElementById("lon").value = final_lon || "";
+
+            // create object with all form values (except confirm_password)
+            var form_data = {};
+            var inputs = document.getElementById("user-form").elements;
+            // read all <input> values from the form
+            for(var i = 0; i < inputs.length; i++){
+                var input = inputs[i];
+                if(input.name && input.name !== "confirm_password"){ // only add fields that have a name AND are not confirm_password
+                    form_data[input.name] = input.value;
+                }
+            }
+
+            // send the registration data to server as JSON
+            $.ajax({
+                url: '/RegistrationAndLogin/Register',// servlet URL
+                type: 'POST',
+                contentType: 'application/json', // we send JSON
+                data: JSON.stringify(form_data), // convert JS object to JSON text
+                success: function(response){ // if registration was successful
+                    document.getElementById("submit-message").innerHTML = "registration success!";
+                    document.getElementById("submit-message").style.color = "green";
+                    // show JSON response from server for confirmation
+                    document.getElementById("json-output").innerHTML = "<h3>server response:</h3><pre>" + JSON.stringify(response, null, 2) + "</pre>";
+                },
+                error: function(xhr){
+                    var error_message = "registration failed";
+                    
+                    if(xhr.status === 403){// status 403 = username or email already exists in database
+                        try{
+                            var error_response = JSON.parse(xhr.responseText);
+                            error_message = error_response.error || "username or email already exists";
+                        } catch(e){
+                            error_message = "username or email already exists";
+                        }
+                    }else if(xhr.status === 400){ // status 400 = missing required fields or invalid data
+                        error_message = "invalid data provided";
+                    }else{ // other server errors (500, etc)
+                        error_message = "server error: " + xhr.status;
+                    }
+                    // show error message in red
+                    document.getElementById("submit-message").innerHTML = error_message;
+                    document.getElementById("submit-message").style.color = "red";
+                    // show detailed server error for debugging
+                    if(xhr.responseText) {
+                        document.getElementById("json-output").innerHTML = "<h3>server error:</h3><pre>" + xhr.responseText + "</pre>";
+                    }
+                }
+            });
+            
+            return false; // stop browser from reloading the page
+        }
+
+        // ajax functions for checking username and email availability
+        function check_username_availability() {
+            var username = document.getElementById("username").value;
+            var message_div = document.getElementById("username-availability-message");
+            
+            if(username.length < 6){ // if username is too short, clear the message
+                message_div.innerHTML = "";
+                return;
+            }
+            // send a request to check if username exists
+            $.ajax({
+                url: '/RegistrationAndLogin/checkUsername',
+                type: 'GET',
+                data: {username: username},
+                success: function(response){
+                    if(response.available){
+                        message_div.innerHTML = "username is available";
+                        message_div.style.color = "green";
+                    }else{
+                        message_div.innerHTML = "username is already taken";
+                        message_div.style.color = "red";
+                    }
+                },
+                error: function(){
+                    message_div.innerHTML = "error checking username";
+                    message_div.style.color = "red";
+                }
+            });
+        }
+
+        function check_email_availability(){
+            var email = document.getElementById("email").value;
+            var message_div = document.getElementById("email-availability-message");
+            
+            if(email.length === 0){// if empty clear the message
+                message_div.innerHTML = "";
+                return;
+            }
+            
+            $.ajax({// send a request to check email
+                url: '/RegistrationAndLogin/checkEmail',
+                type: 'GET',
+                data: {email: email },
+                success: function(response){
+                    if(response.available){
+                        message_div.innerHTML = "email is available";
+                        message_div.style.color = "green";
+                    } else {
+                        message_div.innerHTML = "email is already in use";
+                        message_div.style.color = "red";
+                    }
+                },
+                error: function(){
+                    message_div.innerHTML = "error checking email";
+                    message_div.style.color = "red";
+                }
+            });
+        }
+        
+        // event listeners for real-time checking
+        document.getElementById("username").addEventListener("input", check_username_availability);
+        document.getElementById("username").addEventListener("blur", check_username_availability);
+        document.getElementById("email").addEventListener("input", check_email_availability);
+        document.getElementById("email").addEventListener("blur", check_email_availability);
+    </script>
+</body>
+</html>

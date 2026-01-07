@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Band Finder (Logged Band)</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <!-- jQuery for AJAX requests -->
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js"></script>
+    <script src="http://www.openlayers.org/api/OpenLayers.js"></script>
+    <link rel="stylesheet" href="/css/style.css">
+    <script src="/js/common_functions.js"></script>
+    <script src="/js/guest_logic.js"></script>
+    <script src="/js/logged_band_logic.js"></script>
+</head>
+
+<body>
+    <nav class="navbar navbar-default">
+        <div class="container-fluid">
+            <div class="navbar-header">
+                <h2 style="margin-left: 40px;">Band Finder</h2>
+                <h4 style="margin-left: 40px; margin-bottom: 25px;">Logged Band: <span id="display-bandname"
+                        style="font-style: italic"></span></h4>
+            </div>
+            <ul class="nav navbar-nav navbar-right">
+                <li><a href="band_dashboard.html" class="navbar-btn">Profile</a></li>
+                <li><a href="#" onclick="logoutUser(); return false;" class="navbar-btn">Logout</a></li>
+            </ul>
+        </div>
+    </nav>
+    <div class="container-fluid">
+        <!-- main class row is needed to place footer underneath it, however, container-fluid is important so 'row' doesn't strech our website beyond 100% width -->
+        <main class="row">
+            <div class="col-md-8">
+                <div class="content-box">
+                    <ul class="nav nav-tabs" role="tablist"> <!-- bootstrap tabs -->
+                        <li role="presentation" class="active">
+                            <a href="#public-events-tab" aria-controls="public-events-tab" role="tab"
+                                data-toggle="tab">Manage Public
+                                Events</a>
+                        </li>
+                        <li role="presentation">
+                            <a href="#private-events-tab" aria-controls="private-events-tab" role="tab"
+                                data-toggle="tab">Manage Private Events</a>
+                        </li>
+                        <li role="presentation">
+                            <a href="#events-tab" aria-controls="events-tab" role="tab" data-toggle="tab">Public
+                                Events</a>
+                        </li>
+                        <li role="presentation">
+                            <a href="#bands-tab" aria-controls="bands-tab" role="tab" data-toggle="tab">Bands</a>
+                        </li>
+                    </ul>
+
+                    <div class="tab-content">
+                        <!-- MANAGE PUBLIC EVENTS TAB PILL -->
+                        <div role="tabpanel" class="tab-pane active" id="public-events-tab">
+                            <div class="dashboard-section">
+                                <h3>Add New Public Event</h3>
+                                <form id="add-public-event-form" onsubmit="handlePublicEventSubmit(event)">
+                                    <input type="hidden" id="event_id" name="event_id">
+
+                                    <div class="form-two">
+                                        <div class="form-one">
+                                            <label for="event_type"><span class="required">* </span>Event Type</label>
+                                            <select id="event_type" name="event_type" required>
+                                                <option value="">Select Type</option>
+                                                <option value="Concert">Concert</option>
+                                                <option value="Festival">Festival</option>
+                                                <option value="Charity">Charity</option>
+                                                <option value="Open Mic">Open Mic</option>
+                                            </select>
+                                        </div>
+                                        <div class="form-one">
+                                            <label for="event_datetime"><span class="required">* </span>Date &
+                                                Time</label>
+                                            <input type="datetime-local" id="event_datetime" name="event_datetime"
+                                                required>
+                                        </div>
+                                    </div>
+
+                                    <div class="form-one">
+                                        <label for="event_description"><span class="required">*
+                                            </span>Description</label>
+                                        <textarea id="event_description" name="event_description" required
+                                            minlength="10" placeholder="Describe the event"></textarea>
+                                    </div>
+
+                                    <div class="form-one">
+                                        <label for="participants_price"><span class="required">* </span>Ticket Price
+                                            (€)</label>
+                                        <input type="number" id="participants_price" name="participants_price" min="0"
+                                            step="0.01" required placeholder="0 for free entry">
+                                    </div>
+
+                                    <div class="form-two">
+                                        <div class="form-one">
+                                            <label for="event_country"><span class="required">* </span>Country</label>
+                                            <select id="event_country" name="event_country" required>
+                                                <option value="Greece">Greece</option>
+                                            </select>
+                                        </div>
+                                        <div class="form-one">
+                                            <label for="event_city"><span class="required">* </span>City</label>
+                                            <input type="text" id="event_city" name="event_city" required>
+                                        </div>
+                                    </div>
+
+                                    <div class="form-one">
+                                        <label for="event_address"><span class="required">* </span>Address</label>
+                                        <input type="text" id="event_address" name="event_address" required
+                                            placeholder="Street, Number">
+
+                                        <input type="hidden" id="event_lat" name="event_lat">
+                                        <input type="hidden" id="event_lon" name="event_lon">
+                                    </div>
+
+                                    <button type="button" class="password-show-hide"
+                                        onclick="verifyEventLocation()">Verify Location</button>
+                                    <button type="button" onclick="resetEventForm()"
+                                        class="password-show-hide">Clear</button>
+                                    <button type="submit" class="submit-button" id="save-event-btn">Publish
+                                        Event</button>
+                                    <div id="event-submit-message" class="password-mismatch-message"></div>
+                                </form>
+                            </div>
+
+                            <div class="header" style="margin-top: 50px;">
+                                <h1>Your Scheduled Events</h1>
+                                <p>See what you should prepare for</p>
+                            </div>
+                            <div id="my-events-list"></div> <!-- list of my upcoming events -->
+                        </div>
+
+                        <!-- MANAGE PRIVATE EVENTS TAB PILL -->
+                        <div role="tabpanel" class="tab-pane" id="private-events-tab">
+                            <div class="dashboard-section">
+                                <div class="header">
+                                    <h3>Manage your Private Events Requests</h3>
+                                    <p>Review requests from users, set prices, and accept or reject performances.</p>
+                                </div>
+                                <div id="private-events-list"></div>
+                            </div>
+                        </div>
+
+                        <!-- PUBLIC EVENTS TAB PILL -->
+                        <div role="tabpanel" class="tab-pane" id="events-tab">
+                            <div class="dashboard-section">
+                                <h3>Filter public events</h3>
+                                <form id="manual-filter-form-event"
+                                    onsubmit="event.preventDefault(); loadPublicEvents();">
+                                    <div class="form-two">
+                                        <div class="form-one">
+                                            <label for="filter-genre">Music genre</label>
+                                            <input type="text" id="filter-event-genre">
+                                        </div>
+                                        <div class="form-one">
+                                            <label for="filter-city">City</label>
+                                            <input type="text" id="filter-event-city">
+                                        </div>
+                                    </div>
+                                    <div class="form-one">
+                                        <label for="filter-date">Date (from)</label>
+                                        <input type="date" id="filter-event-date">
+                                    </div>
+                                    <button type="submit" class="password-show-hide">Apply filters</button>
+                                    <button type="button" onclick="resetFiltersEvents()"
+                                        class="password-show-hide">Reset filters</button>
+                                </form>
+                                <h3>Or search using AI prompt</h3>
+                                <form id="filter-form-prompt-event"
+                                    onsubmit="event.preventDefault(); loadEventsByPrompt();">
+                                    <div class="form-one">
+                                        <label for="filter-prompt">Type your own query</label>
+                                        <input type="text" id="filter-event-prompt"
+                                            placeholder="Events in Heraklion in September 2026">
+                                    </div>
+                                    <button type="submit" class="password-show-hide" id="ai-event-submit-btn">Search
+                                        with Prompt</button>
+                                </form>
+                                <h3>Events on Map</h3>
+                                <div id="map-container" style="height: 400px; display: none;">
+                                    <div id="Map" style="height: 100%; width: 100%;"></div>
+                                </div>
+                                <button type="button" id="toggle-map-button" class="password-show-hide"
+                                    onclick="toggleMapVisibility()">Show Map</button>
+                                <!-- same visual class as password-show-hide -->
+                            </div>
+                            <div class="header" style="margin-top: 50px;">
+                                <h1>Upcoming Public Events</h1>
+                                <p>See what's happening in the music world around you</p>
+                            </div>
+                            <div id="events-container"></div> <!-- list of upcoming events -->
+                        </div>
+
+                        <!-- BANDS TAB PILL -->
+                        <div role="tabpanel" class="tab-pane" id="bands-tab">
+                            <div class="dashboard-section">
+                                <h3>Filter bands</h3>
+                                <form id="manual-filter-form-band"
+                                    onsubmit="event.preventDefault(); loadAlltheBands();">
+                                    <div class="form-two">
+                                        <div class="form-one">
+                                            <label for="filter-genre">Music genre</label>
+                                            <input type="text" id="filter-band-genre">
+                                        </div>
+                                        <div class="form-one">
+                                            <label for="filter-city">City</label>
+                                            <input type="text" id="filter-band-city">
+                                        </div>
+                                    </div>
+                                    <div class="form-one">
+                                        <label for="filter-year">Year (from)</label>
+                                        <input type="number" id="filter-band-year" min="1900" max="2025">
+                                    </div>
+                                    <button type="submit" class="password-show-hide">Apply filters</button>
+                                    <button type="button" onclick="resetFiltersBands()" class="password-show-hide">Reset
+                                        filters</button>
+                                </form>
+                                <h3>Or search using AI prompt</h3>
+                                <form id="filter-form-prompt-band"
+                                    onsubmit="event.preventDefault(); loadBandsByPrompt();">
+                                    <div class="form-one">
+                                        <label for="filter-prompt">Type your own query</label>
+                                        <input type="text" id="filter-band-prompt"
+                                            placeholder="Bands in Heraklion that play rock">
+                                    </div>
+                                    <button type="submit" class="password-show-hide" id="ai-band-submit-btn">Search with
+                                        Prompt</button>
+                                </form>
+                            </div>
+                            <div class="header" style="margin-top: 50px;">
+                                <h1>List of bands</h1>
+                                <p>Get to know bands in your area</p>
+                            </div>
+                            <div id="bands-container"></div> <!-- list of upcoming events -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <div class="aside-box">
+                    <h2>Talk with our chatbot</h2>
+                    <div id="chatbot-interface">
+                        <div id="chat-output" class="chat-output-box">
+                            <p>Hey! I am an AI music assistent. Ask me about anything related to
+                                music!</p>
+                        </div>
+
+                        <div class="input-chat">
+                            <input type="text" id="user-input" class="form-control" placeholder="Type your question..">
+                            <!-- bootstrap form class -->
+                            <span class="input-group-btn">
+                                <button class="password-show-hide" type="button" id="send-request-btn"
+                                    onclick="sendChatQuery()">Send</button>
+                            </span>
+                        </div>
+                    </div>
+                    <div class="chatbot-info" style="margin-top: 20px;">
+                        <p>Examples of questions you can ask:</p>
+                        <ul>
+                            <li>What was the first Queen song to reach number one on the charts?</li>
+                            <li>Name three of the most influential progressive rock bands of the 1970s.</li>
+                            <li>Who composed "The Four Seasons"?</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="aside-box" style="padding: 0px !important;">
+                    <button type="button" onclick="checkBandIdAndShow()" class="submit-button" style="margin-top: 0px !important;
+                    color: black !important; font-weight: 500 !important; background-color: rgb(236, 236, 236) !important;">Check my Incoming Events</button>
+                </div>
+                <div class="aside-box" style="margin-top: 30px;">
+                    <div id="conversation-with-user"></div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <div id="band-popup-window" class="popup-overlay" style="display: none;">
+        <div class="inside-of-popup-window">
+            <button class="password-show-hide" style="top: 20px !important; right:20px !important; padding: 10px 20px !important; position: absolute !important;"
+            onclick="closePopupWindow()">Hide</button>
+            <div id="popup-content-area"></div>
+        </div>
+    </div>
+
+    <footer>
+        <div class="footer-content">
+            <div class="weather-widget">
+                <h3>🌧️ Weather for the next 5 days 🌧️</h3>
+                <h4>Weather for: <strong><span id="weather-forecast-city"></span></strong></h4>
+                <div id="weather-forecast-container"></div>
+            </div>
+            <div class="footer-section copyright">
+                <h5>&copy; Band Finder - Makowski Michał - csd6101</h5>
+            </div>
+        </div>
+    </footer>
+</body>
+
+</html>

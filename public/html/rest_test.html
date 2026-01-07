@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Dashboard</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/style.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script> <!-- jQuery for AJAX requests -->
+    <script src="http://www.openlayers.org/api/OpenLayers.js"></script>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>REST API testing - reviews</h1>
+        </div>
+        <!-- POST -->
+        <div class="dashboard-section">
+            <h3>1. POST - add new review</h3>
+            <form id="add-review-form" onsubmit="addReview(event)">
+                <div class="form-one">
+                    <label><span class="required">* </span>Band name</label>
+                    <input type="text" id="post-band-name" required>
+                    <div class="note"><strong>Note:</strong> the band_name should exist in the table of bands</div>
+                </div>
+                <div class="form-one">
+                    <label><span class="required">* </span>Sender name</label>
+                    <input type="text" id="post-sender" required>
+                </div>
+                <div class="form-one">
+                    <label><span class="required">* </span>Your review</label>
+                    <textarea id="post-review" required></textarea>
+                </div>
+                <div class="form-one">
+                    <label><span class="required">* </span>Rating</label>
+                    <div class="note"><strong>Note:</strong> Rating in range 1-5</div>
+                    <input type="number" id="post-rating" min="1" max="5" required placeholder="5">
+                </div>
+                <button type="submit" class="submit-button">Add review</button>
+                <div id="post-message"></div>
+            </form>
+            <div id="add-review-result" class="api-result"></div>
+        </div>
+
+        <!-- GET -->
+        <div class="dashboard-section">
+            <h3>2. GET - get reviews</h3>
+            <form id="get-reviews-form" onsubmit="getReviews(event)">
+                <div class="form-one">
+                    <label><span class="required">* </span>Band name (or 'all')</label>
+                    <input type="text" id="get-band-name" required placeholder="all" value="all">
+                </div>
+                <div class="form-two">
+                    <div class="form-one">
+                        <label>Rating From (optional)</label>
+                        <input type="number" id="get-rating-from" min="1" max="5" placeholder="1">
+                    </div>
+                    <div class="form-one">
+                        <label>Rating To (optional)</label>
+                        <input type="number" id="get-rating-to" min="1" max="5" placeholder="5">
+                    </div>
+                </div>
+                <button type="submit" class="submit-button">Get reviews</button>
+                <div id="get-message"></div>
+            </form>
+            <div id="get-reviews-result" class="api-result"></div>
+        </div>
+
+        <!-- PUT -->
+        <div class="dashboard-section">
+            <h3>3. PUT - Update Review Status</h3>
+            <form id="update-status-form" onsubmit="updateReviewStatus(event)">
+                <div class="form-two">
+                    <div class="form-one">
+                        <label><span class="required">* </span>Review ID</label>
+                        <input type="number" id="put-review-id" required placeholder="1">
+                    </div>
+                    <div class="form-one">
+                        <label><span class="required">* </span>New status</label>
+                        <select id="put-status" required>
+                            <option value="published">published</option>
+                            <option value="rejected">rejected</option>
+                        </select>
+                    </div>
+                </div>
+                <button type="submit" class="submit-button">Update status</button>
+                <div id="put-message"></div>
+            </form>
+            <div id="update-status-result" class="api-result"></div>
+        </div>
+
+        <!-- DELETE -->
+        <div class="dashboard-section">
+            <h3>4. DELETE - delete Review</h3>
+            <form id="delete-review-form" onsubmit="deleteReview(event)">
+                <div class="form-one">
+                    <label><span class="required">* </span>Review ID</label>
+                    <input type="number" id="delete-review-id" required placeholder="1">
+                </div>
+                <button type="submit" class="submit-button">Delete review</button>
+                <div id="delete-message"></div>
+            </form>
+            <div id="delete-review-result" class="api-result"></div>
+        </div>
+    </div>
+
+    <script>
+        // add review (post)
+        function addReview(event) {  
+            event.preventDefault(); // stops the form from reloading the page
+            const data={ // creates an object with form values
+                band_name: $('#post-band-name').val(), // gets band name from input
+                sender: $('#post-sender').val(), // gets sender name from input
+                review: $('#post-review').val(), // gets review text
+                rating: parseInt($('#post-rating').val()) // gets rating and converts it to integer
+            };
+            
+            $.ajax({
+                url: '/review', // endpoint in the database (folder)
+                method: 'POST', // http method is post
+                contentType: 'application/json', // tells server that data is json
+                data: JSON.stringify(data), // converts js object to json string
+                success: function(response){
+                    const messageDiv = document.getElementById('post-message');
+                    messageDiv.innerHTML = "record posted successfully";
+                    messageDiv.style.color = "green";
+                    $('#add-review-result').html('<pre style="color:green;">' +JSON.stringify(response, null, 2) + '</pre>');
+                },
+                error: function(xhr){
+                    $('#add-review-result').html('<pre style="color:red;">error '+xhr.status+ ': '+ JSON.stringify(xhr.responseJSON, null, 2)+'</pre>');
+                }});}
+        
+        // get reviews (get)
+        function getReviews(event) {
+            event.preventDefault();
+            const bandName = $('#get-band-name').val();
+            const ratingFrom = $('#get-rating-from').val();
+            const ratingTo = $('#get-rating-to').val();
+            let url = '/reviews/' + bandName;
+            
+            if (ratingFrom && ratingTo){ url += `?ratingFrom=${ratingFrom}&ratingTo=${ratingTo}`; }
+            
+            $.ajax({
+                url: url,
+                method: 'GET',
+                success: function(response){
+                    const messageDiv =document.getElementById('get-message');
+                    messageDiv.innerHTML="record got successfully";
+                    messageDiv.style.color ="green";
+                    $('#get-reviews-result').html('<pre style="color:green;">' +JSON.stringify(response, null, 2) +'</pre>');
+                },
+                error: function(xhr){ 
+                    $('#get-reviews-result').html('<pre style="color:red;">error '+ xhr.status+ ': '+JSON.stringify(xhr.responseJSON, null, 2)+ '</pre>');
+                }});}
+        
+        // update review status (put)
+        function updateReviewStatus(event) {
+            event.preventDefault();
+            const reviewId= $('#put-review-id').val();
+            const status= $('#put-status').val();
+    
+            $.ajax({
+                url: '/reviewStatus/'+ reviewId + '/' +status,
+                method: 'PUT',
+                success: function(response){
+                    const messageDiv =document.getElementById('put-message');
+                    messageDiv.innerHTML= "record put successfully";
+                    messageDiv.style.color ="green";
+                    $('#update-status-result').html('<pre style="color:green;">' +JSON.stringify(response, null, 2) + '</pre>');
+                },
+                error: function(xhr){
+                    $('#update-status-result').html('<pre style="color:red;">error ' +xhr.status + ': ' +JSON.stringify(xhr.responseJSON, null, 2)+'</pre>');
+                }});}
+        
+        // delete review
+        function deleteReview(event){
+            event.preventDefault();
+            const reviewId = $('#delete-review-id').val();
+            
+            $.ajax({
+                url: '/reviewDeletion/' +reviewId,
+                method: 'DELETE',
+                success: function(response){
+                    const messageDiv = document.getElementById('delete-message');
+                    messageDiv.innerHTML = "record deleted successfully";
+                    messageDiv.style.color = "green";
+                    $('#delete-review-result').html('<pre style="color:green;">' +JSON.stringify(response, null, 2)+ '</pre>');
+                },
+                error: function(xhr){
+                    $('#delete-review-result').html('<pre style="color:red;">error '+ xhr.status + ': ' + JSON.stringify(xhr.responseJSON, null, 2) +'</pre>');
+                }});}
+    </script>
+</body>
+</html>

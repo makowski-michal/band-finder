@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Band Dashboard</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/style.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <!-- jQuery for AJAX requests -->
+    <script src="http://www.openlayers.org/api/OpenLayers.js"></script>
+    <script src="/js/dashboards_logic.js"></script>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Band Dashboard</h1>
+            <button id="go-back-button" onclick="window.location.href='logged_band.html'" class="navbar-btn">Go
+                Back</button>
+        </div>
+        <div> <!-- navigation tabs for spa -->
+            <button onclick="showSection('view')" class="tab-button active" id="view-tab">View Information</button>
+            <button onclick="showSection('edit')" class="tab-button" id="edit-tab">Edit Information</button>
+        </div>
+
+        <!-- ############ section to view band information -->
+        <div id="view-section">
+            <h2>Your Information</h2>
+            <div id="band-info-display"></div>
+        </div>
+
+        <!-- ############### section to edit band information -->
+        <div id="edit-section" style="display: none;"> <!--  none so it doesnt appear at first -->
+            <h2>Edit Your Information</h2>
+            <div class="note"><strong>Note:</strong> Username and email cannot be changed</div>
+
+            <form id="band-form" onsubmit="return form_update(event)">
+                <!-- call function form_update when event (button pressed) -->
+                <div class="form-one"> <!-- username -->
+                    <label for="username"><span class="required">* </span>Username</label>
+                    <input type="text" id="username" name="username" pattern="[a-zA-Z][a-zA-Z0-9]{5,}" minlength="6"
+                        required placeholder="username" disabled>
+                    <!-- {5,} means last expression times at least 5 -->
+                    <!-- ########## disabled - cannot change username -->
+                </div>
+                <div class="form-one"> <!-- email, email patterns - HTML 5 -->
+                    <label for="email"><span class="required">* </span>Email</label>
+                    <input type="email" id="email" name="email" required placeholder="email@address.com" disabled>
+                    <!-- ########## disabled - cannot change email -->
+                </div>
+                <div class="form-two"> <!-- passoword and confirm password -->
+                    <div class="form-one">
+                        <label for="password"><span class="required">* </span>New Password</label>
+                        <input type="password" id="password" name="password"
+                            pattern="(?=.*[A-Z])(?=.*\d)(?=.*[#$%&@!*])[A-Za-z\d#$%&@!*]{8,14}" minlength="8"
+                            maxlength="14" required placeholder="new password" onchange="password_strength()">
+                        <!-- ?=. is a positive lookahead, so we check if sth is in the password withoit 'consuming' the letters yet -->
+                        <!-- *[A-Z] at least one big letter, \d means numbers [0-9], after set of look aheads we actually insist on 8-14 characters from enlisted -->
+                        <button type="button" class="password-show-hide"
+                            onclick="password_visibility('password', this)">Show</button>
+                        <div id="password-strength-message" class="password-strength-message"></div>
+                        <div class="note">
+                            <strong>Note:</strong> Password must be 8-14 characters long and must
+                            contain at least one uppercase Latin letter, one number, and one symbol (e.g., '#', '$',
+                            '%', etc.)
+                        </div>
+                    </div>
+                    <div class="form-one">
+                        <label for="confirm_password"><span class="required">* </span>Confirm New Password</label>
+                        <input type="password" id="confirm_password" name="confirm_password"
+                            pattern="(?=.*[A-Z])(?=.*\d)(?=.*[#$%&@!*])[A-Za-z\d#$%&@!*]{8,14}" minlength="8"
+                            maxlength="14" required placeholder="repeat new password">
+                        <button type="button" class="password-show-hide"
+                            onclick="password_visibility('confirm_password', this)">Show</button>
+                        <div id="band-password-message" class="password-mismatch-message"></div>
+                    </div>
+                </div>
+                <div class="form-one">
+                    <label for="band_name"><span class="required">* </span>Band Name</label>
+                    <input type="text" id="band_name" name="band_name" minlength="3" maxlength="30" required>
+                </div>
+                <div class="form-one">
+                    <label for="music_genres"><span class="required">* </span>Music Genres</label>
+                    <input type="text" id="music_genres" name="music_genres" minlength="3" maxlength="200" required>
+                </div>
+                <div class="form-one">
+                    <label for="band_description"><span class="required">* </span>Band Description</label>
+                    <textarea id="band_description" name="band_description" minlength="3" maxlength="1000"
+                        required></textarea>
+                </div>
+
+                <div class="form-two">
+                    <div class="form-one">
+                        <label for="members_number"><span class="required">* </span>Number of Members</label>
+                        <input type="number" id="members_number" name="members_number" min="1" max="10" required>
+                    </div>
+                    <div class="form-one">
+                        <label for="foundedYear"><span class="required">* </span>Year Founded</label>
+                        <input type="number" id="foundedYear" name="foundedYear" min="1960" max="2025" required>
+                    </div>
+                </div>
+
+                <div class="form-two">
+                    <div class="form-one">
+                        <label for="band_city"><span class="required">* </span>Band City</label>
+                        <input type="text" id="band_city" name="band_city" minlength="3" maxlength="30" required>
+                    </div>
+                    <div class="form-one">
+                        <label for="band_telephone"><span class="required">* </span>Telephone</label>
+                        <input type="tel" id="band_telephone" name="telephone" pattern="\d{10,14}" required>
+                    </div>
+                </div>
+
+                <div class="form-one">
+                    <label for="webpage">Webpage Link</label>
+                    <input type="url" id="webpage" name="webpage">
+                </div>
+
+                <div class="form-one">
+                    <label for="photo">Photo Link</label>
+                    <input type="url" id="photo" name="photo">
+                </div>
+
+                <button type="submit" class="submit-button">Update Information</button>
+                <div id="submit-message" class="password-mismatch-message"></div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // dashboard specific functions - check session and load band data
+        $(document).ready(function () {
+            checkLoginStatus(); // when page loads, check if band is logged in
+        });
+
+        function checkLoginStatus() {
+            $.ajax({
+                url: '/RegistrationAndLogin/checkSession', // ask server if session is still valid
+                method: 'GET',
+                success: function (response) {
+                    if (response.loggedIn && response.user.type === 'band') {
+                        loadBandInfo(); // session ok, load band info from db
+                    } else {
+                        window.location.href = 'guest.html'; // session invalid, send band back to guest page
+                    }
+                },
+                error: function () {
+                    window.location.href = 'guest.html'; // if server error, force re-login
+                }
+            });
+        }
+
+        function loadBandInfo() {
+            $.ajax({
+                url: '/RegistrationAndLogin/getBandInfo', // get full band data for dashboard
+                method: 'GET',
+                success: function (band) {
+                    displayBandInfo(band); // show band info on screen
+                    populateEditForm(band); // fill edit form with current data
+                }
+            });
+        }
+
+        function displayBandInfo(band) { // function to display band information
+            // build html table row by row with band data
+            let html = '<table class="table table-bordered">';
+            html += '<tr><th>Username</th><td>' + band.username + '</td></tr>';
+            html += '<tr><th>Email</th><td>' + band.email + '</td></tr>';
+            html += '<tr><th>Band Name</th><td>' + band.band_name + '</td></tr>';
+            html += '<tr><th>Music Genres</th><td>' + band.music_genres + '</td></tr>';
+            html += '<tr><th>Description</th><td>' + band.band_description + '</td></tr>';
+            html += '<tr><th>Members</th><td>' + band.members_number + '</td></tr>';
+            html += '<tr><th>Founded Year</th><td>' + band.foundedYear + '</td></tr>';
+            html += '<tr><th>City</th><td>' + band.band_city + '</td></tr>';
+            html += '<tr><th>Telephone</th><td>' + band.telephone + '</td></tr>';
+            html += '<tr><th>Webpage</th><td>' + (band.webpage || 'Empty') + '</td></tr>';
+            html += '<tr><th>Photo Link</th><td>' + (band.photo || 'Empty') + '</td></tr>';
+            html += '</table>';
+            $('#band-info-display').html(html);
+        }
+
+        function populateEditForm(band) {
+            $('#username').val(band.username);
+            $('#email').val(band.email);
+            $('#password').val(band.password);
+            $('#confirm_password').val(band.password);
+            $('#band_name').val(band.band_name);
+            $('#music_genres').val(band.music_genres);
+            $('#band_description').val(band.band_description);
+            $('#members_number').val(band.members_number);
+            $('#foundedYear').val(band.foundedYear);
+            $('#band_city').val(band.band_city);
+            $('#band_telephone').val(band.telephone);
+            $('#webpage').val(band.webpage || '');
+            $('#photo').val(band.photo || '');
+        }
+
+        function showSection(section) {// function to switch between view and edit sections in spa
+            if (section === 'view') {
+                $('#view-section').show(); // show view panel
+                $('#edit-section').hide();// hide edit panel
+                $('#view-tab').addClass('active'); // activate view tab
+                $('#edit-tab').removeClass('active');// deactivate edit tab
+                loadBandInfo(); // refresh data before showing
+            } else {
+                $('#view-section').hide();
+                $('#edit-section').show();
+                $('#view-tab').removeClass('active');// deactivate view tab
+                $('#edit-tab').addClass('active');// activate edit tab
+            }
+        }
+
+        document.getElementById("password").addEventListener("input", function () { is_password_the_same("password", "confirm_password", "band-password-message"); });
+        document.getElementById("confirm_password").addEventListener("input", function () { is_password_the_same("password", "confirm_password", "band-password-message"); });
+
+        async function form_update(event) {
+            event.preventDefault();
+            if (password_strength() === "weak") {
+                document.getElementById("submit-message").innerHTML = "can not update, password is too weak";
+                return false;
+            }
+
+            var form_data = {};
+            var inputs = document.getElementById("band-form").elements;
+            for (var i = 0; i < inputs.length; i++) {
+                var input = inputs[i];
+                if (input.name && input.name !== "confirm_password") {
+                    form_data[input.name] = input.value;
+                }
+            }
+
+            $.ajax({
+                url: '/RegistrationAndLogin/updateInfo', // endpoint for bands
+                type: 'PUT',
+                contentType: 'application/json',
+                data: JSON.stringify(form_data),
+                success: function (response) {
+                    document.getElementById("submit-message").innerHTML = "update successful";
+                    document.getElementById("submit-message").style.color = "green";
+                    loadBandInfo();
+                },
+                error: function (xhr) {
+                    var error_message = "update failed";
+
+                    if (xhr.status === 403) {// status 403 = not logged in
+                        error_message = "not logged in";
+                    } else if (xhr.status === 400) { // status 400 = missing required fields or invalid data
+                        error_message = "invalid data provided";
+                    } else { // other server errors 500 etc
+                        error_message = "server error: " + xhr.status;
+                    }
+                    // show error message in red
+                    document.getElementById("submit-message").innerHTML = error_message;
+                    document.getElementById("submit-message").style.color = "red";
+                }
+            });
+            return false;
+        }
+    </script>
+</body>
+
+</html>

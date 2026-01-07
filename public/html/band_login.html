@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User/Band Login</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/style.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <!-- jQuery for AJAX requests -->
+    <script src="/js/common_functions.js"></script>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <h1><span class="required"><strong>Band</strong></span> Login</h1>
+            <h4>Login to access your dashboard</h4>
+        </div>
+        <form id="login-form" class="form-one" onsubmit="handleLogin(event, 'band')">
+            <div class="form-one">
+                <label for="username"><span class="required">* </span>Username</label>
+                <input type="text" id="login-username" required placeholder="username">
+            </div>
+            <div class="form-one">
+                <label for="username"><span class="required">* </span>Password</label>
+                <input type="password" id="login-password" required placeholder="password">
+            </div>
+            <div id="login-message"></div>
+            <button type="submit" class="submit-button">Login</button>
+            <button id="go-back-button-login" onclick="window.location.href='guest.html'" class="password-show-hide">Go
+                Back</button>
+        </form>
+    </div>
+</body>
+
+</html>
