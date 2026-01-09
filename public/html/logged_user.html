@@ -12,9 +12,11 @@
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js"></script>
     <script src="http://www.openlayers.org/api/OpenLayers.js"></script>
     <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css"> <!-- Avabilty calendar -->
     <script src="/js/common_functions.js"></script>
     <script src="/js/guest_logic.js"></script>
     <script src="/js/logged_user_logic.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script> <!-- Avabilty calendar -->
 </head>
 
 <body>
@@ -43,6 +45,15 @@
                         </li>
                         <li role="presentation">
                             <a href="#bands-tab" aria-controls="bands-tab" role="tab" data-toggle="tab">Bands</a>
+                        </li>
+                        <li role="presentation">
+                            <a href="#reviews-tab" aria-controls="reviews-tab" role="tab" data-toggle="tab">Review a Band</a>
+                        </li>
+                        <li role="presentation">
+                            <a href="#order-priv-tab" aria-controls="order-priv-tab" role="tab" data-toggle="tab">Order a Private Event</a>
+                        </li>
+                        <li role="presentation">
+                            <a href="#private-events-tab" aria-controls="private-events-tab" role="tab" data-toggle="tab">My Private Events</a>
                         </li>
                     </ul>
 
@@ -139,6 +150,58 @@
                             </div>
                             <div id="bands-container"></div> <!-- list of upcoming events -->
                         </div>
+
+                        <div role="tabpanel" class="tab-pane" id="reviews-tab">
+                            <div class="dashboard-section">
+                                <h3>Review a Band</h3>
+                                <form id="add-review-form" onsubmit="addReview(event)">
+                                    <div class="form-one">
+                                        <label><span class="required">* </span>Band name</label>
+                                        <input type="text" id="post-band-name" required>
+                                        <div class="note"><strong>Note:</strong> the band_name should exist in the table of bands</div>
+                                    </div>
+                                    <div class="form-one">
+                                        <label><span class="required">* </span>Sender name</label>
+                                        <input type="text" id="post-sender" required>
+                                    </div>
+                                    <div class="form-one">
+                                        <label><span class="required">* </span>Your review</label>
+                                        <textarea id="post-review" required></textarea>
+                                    </div>
+                                    <div class="form-one">
+                                        <label><span class="required">* </span>Rating</label>
+                                        <div class="note"><strong>Note:</strong> Rating in range 1-5</div>
+                                        <input type="number" id="post-rating" min="1" max="5" required placeholder="5">
+                                    </div>
+                                    <button type="submit" class="submit-button">Add review</button>
+                                    <div id="post-message"></div>
+                                </form>
+                                <div id="add-review-result" class="api-result"></div>
+                            </div>
+                        </div>
+
+                        <div role="tabpanel" class="tab-pane" id="order-priv-tab">
+                            <div class="dashboard-section">
+                                <h3>Order a Private Event from Your Favourite Band</h3>
+                                <div class="form-one">
+                                    <label><span class="required">* </span>Band ID</label>
+                                    <input type="number" id="priv-request-band-id" autocomplete="off" required>
+                                    <div class="note"><strong>Note:</strong> if you don't know the band's id, you can find it in 'Bands/Get to know this Band'</div>
+                                    <button type="button" onclick="proceedWithPrivEvent()" class="password-show-hide" style="margin-bottom: 10px;">Search</button>
+                                    <div id="ask-priv-message"></div>
+                                    <div id="availability-calendar"></div>
+                                    <div id="continue-with-res"></div>
+                                    <div id="was-res-successful"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div role="tabpanel" class="tab-pane" id="private-events-tab">
+                            <div class="dashboard-section">
+                                <h3>My Private Events</h3>
+                                <p style="margin-bottom: 10px;">Moderate and Take Care of Your Private Events</p>
+                                <div id="private-events-list"></div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -170,8 +233,19 @@
                         </ul>
                     </div>
                 </div>
+                <div class="aside-box" style="margin-top: 30px;">
+                    <div id="conversation-with-user"></div>
+                </div>
             </div>
         </main>
+    </div>
+
+    <div id="band-popup-window" class="popup-overlay" style="display: none;">
+        <div class="inside-of-popup-window">
+            <button class="password-show-hide" style="top: 20px !important; right:20px !important; padding: 10px 20px !important; position: absolute !important;"
+            onclick="closePopupWindow()">Hide</button>
+            <div id="popup-content-area"></div>
+        </div>
     </div>
 
     <footer>

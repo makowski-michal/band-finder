@@ -293,9 +293,6 @@ app.get('/RegistrationAndLogin/getBandInfo', async (req, res) => {
         const bands = await getAllBands(); // get all bands from db
         const currentBand = bands.find(b => b.band_id === req.session.user.band_id); // find matching band in db
 
-        if (!currentBand) {
-            return res.status(404).json({ error: 'band not found' }); // session exists but band missing
-        }
         res.status(200).json(currentBand); // return full band info
     } catch (error) {
         res.status(500).json({ error: 'server error' }); // something broke on server
@@ -716,16 +713,27 @@ app.get('/api/getMyPrivateEvents', async (req, res) => { // downloading private 
             password: "",
             database: "cs359_project"
         });
+        
+        const user = req.session.user;
+        let query = '';
+        let id = '';
 
-        const [rows] = await conn.execute(
-            'SELECT * FROM private_events WHERE band_id = ? ORDER BY event_datetime ASC',
-            [req.session.user.band_id]
-        );
+
+        if (user.band_id) {
+            query = 'SELECT * FROM private_events WHERE band_id = ? ORDER BY event_datetime ASC';
+            id = user.band_id;
+        } else {
+            query = 'SELECT * FROM private_events WHERE user_id = ? ORDER BY event_datetime ASC';
+            id = user.user_id;
+        }
+
+        const [rows] = await conn.execute(query, [id]);
         res.json({ data: rows });
     } catch (e) {
         res.status(500).json({ error: e.message });
     }
 });
+
 
 app.put('/api/updatePrivateEventStatus', async (req, res) => { // acceptance or rejection
     const { private_event_id, status, band_decision } = req.body;
@@ -739,10 +747,17 @@ app.put('/api/updatePrivateEventStatus', async (req, res) => { // acceptance or 
             database: "cs359_project"
         });
 
-        await conn.execute(
-            'UPDATE private_events SET status = ?, band_decision = ? WHERE private_event_id = ? AND band_id = ?',
-            [status, band_decision, private_event_id, req.session.user.band_id]
-        );
+        if (band_decision !== undefined) { // if band updates and has band_decision
+            await conn.execute(
+                'UPDATE private_events SET status = ?, band_decision = ? WHERE private_event_id = ?',
+                [status, band_decision, private_event_id]
+            );
+        } else { // if user updates and only wants to change the status for 'done'
+            await conn.execute(
+                'UPDATE private_events SET status = ? WHERE private_event_id = ?',
+                [status, private_event_id]
+            );
+        }
 
         res.json({ success: true });
     } catch (e) {
@@ -818,10 +833,19 @@ app.post('/api/chat/sendMessage', async (req, res) => {
             const now = new Date();
             const formattedDateTime = now.toISOString().slice(0, 19).replace('T', ' ');
 
-            await conn.execute(
-                'INSERT INTO messages (private_event_id, message, sender, recipient, date_time) VALUES (?, ?, ?, ?, ?)',
-                [private_event_id, message, 'band', 'user', formattedDateTime]
-            );
+            const user = req.session.user;
+
+            if (user.band_id) {
+                await conn.execute(
+                    'INSERT INTO messages (private_event_id, message, sender, recipient, date_time) VALUES (?, ?, ?, ?, ?)',
+                    [private_event_id, message, 'band', 'user', formattedDateTime]
+                );
+            } else {
+                await conn.execute(
+                    'INSERT INTO messages (private_event_id, message, sender, recipient, date_time) VALUES (?, ?, ?, ?, ?)',
+                    [private_event_id, message, 'user', 'band', formattedDateTime]
+                );
+            }
 
             await conn.end();
             res.json({ success: true });
@@ -878,6 +902,40 @@ app.get('/api/getBandDetails/:id', async (req, res) => {
         });
     } catch (error) {
         res.status(500).json({ error: 'Error' });
+    }
+});
+
+// ============================== SENDING REQUEST FOR A PRIVATE EVENT TO DATABSE ==============================
+app.post('/api/addPrivateEvent', async (req, res) => {
+    const { 
+        band_id, event_type, event_datetime, event_city, 
+        event_address, event_description, price, event_lat, event_lon 
+    } = req.body;
+
+    try {
+        const mysql = require('mysql2/promise');
+        const conn = await mysql.createConnection({
+            host: "localhost",
+            user: "root",
+            password: "",
+            database: "cs359_project"
+        });
+
+        await conn.execute(
+            `INSERT INTO private_events 
+            (user_id, band_id, event_type, event_datetime, event_city, event_address, event_description, price, event_lat, event_lon, status) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [
+                req.session.user.user_id, band_id, event_type, event_datetime, 
+                event_city, event_address, event_description, price, 
+                event_lat, event_lon, 'requested'
+            ]
+        );
+
+        await conn.end();
+        res.json({ success: true });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
     }
 });
 
@@ -1053,5 +1111,5 @@ app.use((req, res) => {
 // start the server and listen on configured PORT
 app.listen(PORT, () => {  // iniial app.js from hy359_A3_project_2025-26_start_code
     console.log(`Server running on http://localhost:${PORT}`);
-    console.log(`open http://localhost:3000/html/guest.html`);
+    console.log(`Open http://localhost:3000/html/guest.html`);
 });

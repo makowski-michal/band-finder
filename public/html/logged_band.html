@@ -12,9 +12,11 @@
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js"></script>
     <script src="http://www.openlayers.org/api/OpenLayers.js"></script>
     <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css"> <!-- Avabilty calendar -->
     <script src="/js/common_functions.js"></script>
     <script src="/js/guest_logic.js"></script>
     <script src="/js/logged_band_logic.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script> <!-- Avabilty calendar -->
 </head>
 
 <body>
@@ -52,6 +54,9 @@
                         </li>
                         <li role="presentation">
                             <a href="#bands-tab" aria-controls="bands-tab" role="tab" data-toggle="tab">Bands</a>
+                        </li>
+                        <li role="presentation">
+                            <a href="#avability-tab" aria-controls="avability-tab" role="tab" data-toggle="tab">Your Avability</a>
                         </li>
                     </ul>
 
@@ -237,6 +242,16 @@
                                 <p>Get to know bands in your area</p>
                             </div>
                             <div id="bands-container"></div> <!-- list of upcoming events -->
+                        </div>
+
+                        <div role="tabpanel" class="tab-pane" id="avability-tab"> <!-- tab for calendar avability -->
+                            <div class="dashboard-section">
+                                <h3>Select your Avability</h3>
+                                <p>Select dates when your band is free to play:</p>
+                                <div id="availability-calendar"></div>
+                                <button onclick="saveAvailability()" class="submit-button">Submit Changes</button>
+                                <div id="submit-avb-message"></div>
+                            </div>
                         </div>
                     </div>
                 </div>

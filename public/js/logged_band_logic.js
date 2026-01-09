@@ -1,20 +1,4 @@
-// ========================= Actively displaying band name in h4 =========================
-$(document).ready(function () {
-    $.ajax({
-        url: '/RegistrationAndLogin/getBandInfo',
-        method: 'GET',
-        success: function (response) {
-            if (response && response.band_name) {
-                $('#display-bandname').text(response.band_name);
-            }
-        },
-        error: function () {
-            $('#display-bandname').text("Unknown");
-        }
-    });
-});
-
-// ======================================== PUBLIC EVENTS MANAGMENT ========================================
+// ======================================== PUBLIC EVENTS MANAGMENT but also document ready when loading the page ========================================
 
 $(document).ready(function () {
     $('#conversation-with-user').closest('.aside-box').hide(); // at the beginning the 2nd aside box with messages is hidden
@@ -29,46 +13,35 @@ $(document).ready(function () {
     $('a[href="#private-events-tab"]').on('shown.bs.tab', function (e) {
         loadMyPrivateEvents();
     });
-});
 
-var event_location_verified = false; // in order to store lon/lat in our database, band owner will have to verify location (download the coordinates)
-
-// ======================= VERIFY LOCATION OF THE PUBLIC EVENT =======================
-function verifyEventLocation() {
-    var country = $('#event_country').val();
-    var city = $('#event_city').val();
-    var address = $('#event_address').val();
-    var msgDiv = $('#event-submit-message');
-
-    var full_address = address + " " + city + " " + country;
-    const xhr = new XMLHttpRequest();
-
-    xhr.addEventListener("readystatechange", function () {
-        if (this.readyState === this.DONE) {
-            try {
-                const response = JSON.parse(xhr.responseText);
-                if (!response || response.length === 0) {
-                    msgDiv.text("Couldn't find location, check city and address");
-                    event_location_verified = false;
+    $.ajax({
+            url: '/RegistrationAndLogin/getBandInfo', // downloading and loading the dates from new 'bands' column, which is 'availability_dates'
+            method: 'GET',
+            success: function (response) {
+                if (response && response.availability_dates !== undefined) {
+                    initAvailabilityCalendar(response.availability_dates);
                 } else {
-                    var location_data = response[0];
-                    $('#event_lat').val(parseFloat(location_data.lat));
-                    $('#event_lon').val(parseFloat(location_data.lon)); // convert to lon & lat
-                    event_location_verified = true;
-                    msgDiv.text("Location verified: " + location_data.display_name).css("color", "green");
+                    initAvailabilityCalendar(""); // empty calendar init
                 }
-            } catch (e) {
-                msgDiv.text("Error");
-                event_location_verified = false;
+            },
+            error: function () {
+                initAvailabilityCalendar(""); 
             }
+        });
+
+    $.ajax({ // Actively displaying band name in h4
+        url: '/RegistrationAndLogin/getBandInfo',
+        method: 'GET',
+        success: function (response) {
+            if (response && response.band_name) {
+                $('#display-bandname').text(response.band_name);
+            }
+        },
+        error: function () {
+            $('#display-bandname').text("Unknown");
         }
     });
-
-    xhr.open("GET", "https://forward-reverse-geocoding.p.rapidapi.com/v1/search?q=" + encodeURIComponent(full_address) + "&accept-language=en&polygon_threshold=0.0");
-    xhr.setRequestHeader("x-rapidapi-key", "6c6bf8d1e1mshc1ca0e713f01b86p1003bdjsn0e24e4fdb063"); // api-key
-    xhr.setRequestHeader("x-rapidapi-host", "forward-reverse-geocoding.p.rapidapi.com");
-    xhr.send();
-}
+});
 
 // ======================= EVENTS HANDLING =======================
 function handlePublicEventSubmit(event) {
@@ -312,82 +285,6 @@ function openChat(privateEventId, eventType, userId) {
     loadChatMessages(privateEventId);
 }
 
-function closeChat() {
-    const container = $('#conversation-with-user');
-    container.empty();
-    container.closest('.aside-box').hide(); // hide aside-box
-}
-
-function loadChatMessages(privateEventId) {
-    $.ajax({
-        url: '/api/chat/getMessages',
-        method: 'GET',
-        data: { private_event_id: privateEventId },
-        success: function(response) {
-            const msgBox = $('#chat-messages-box');
-            
-            if (!response.success) return;
-
-            if (response.messages.length === 0) { // if there are no messages
-                msgBox.html('<p style="text-align:center; color:gray; margin-top: 10px;">No messages yet</p>');
-                return;
-            }
-
-            let htmlContent = '';
-
-            response.messages.forEach(msg => {
-                const isMe = (msg.sender === 'band');
-                const msgDate =new Date(msg.date_time);
-                const msgTime = msgDate.toLocaleDateString() + ' ' + msgDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                let rowClass = '';
-
-                if (isMe) {
-                    rowClass = 'message-right';
-                } else {
-                    rowClass = 'message-left';
-                }
-
-                htmlContent += `
-                    <div class="message-row ${rowClass}">
-                        <p style="margin-bottom: 2px; background: rgb(236, 236, 236); border-radius: 5px; padding: 8px; max-width: 75%; word-wrap: break-word;">${msg.message}<br></p>
-                        <p style="font-size: 12px;">${msgTime}</p>
-                    </div>
-                `;
-            });
-            msgBox.html(htmlContent);
-        },
-        error: function(err) {
-            console.error("Error loading messages", err);
-        }
-    });
-}
-
-function sendChatMessage(e, privateEventId, recipientId) {
-    e.preventDefault(); 
-    const inputField = $('#chat-message-input');
-    const message = inputField.val();
-
-    if (!message.trim()) return;
-
-    $.ajax({
-        url: '/api/chat/sendMessage',
-        method: 'POST',
-        contentType: 'application/json',
-        data: JSON.stringify({
-            private_event_id: privateEventId,
-            message: message,
-            recipient_id: recipientId
-        }),
-        success: function(response) {
-            inputField.val('');
-            loadChatMessages(privateEventId);
-        },
-        error: function() {
-            alert('Server error');
-        }
-    });
-}
-
 // ==================== OPENING MY INCOMING EVENTS WITH bandInformation FUNCT ===================
 function checkBandIdAndShow() {
     $.ajax({
@@ -396,6 +293,45 @@ function checkBandIdAndShow() {
         success: function (response) {
             const myId = response.user.band_id;
             bandInformation(myId);
+        }
+    });
+}
+
+// ========================= BAND PICK YOUR AVAILABILITY DATES ========================
+let calendarWindow;
+
+function initAvailabilityCalendar(existingAvailabilityDates) {
+    let downloadedDates = [];
+    if (existingAvailabilityDates) {
+        downloadedDates = existingAvailabilityDates.split(', ');
+    }
+
+    calendarWindow = flatpickr("#availability-calendar", {
+        inline: true, // calendar is opened always
+        mode: "multiple", // you can select multiple dates at once
+        dateFormat: "Y-m-d",
+        defaultDate: downloadedDates // loading calendar with previous availability dates
+    });
+}
+
+function saveAvailability() {
+    const calendarSubmittedInfo = calendarWindow.selectedDates;
+    const datesString = calendarSubmittedInfo.map(date => 
+        flatpickr.formatDate(date, "Y-m-d")
+    ).join(', '); // we format the dates as a long string separated with , so we can store them in a single band column
+
+    $.ajax({
+        url: '/RegistrationAndLogin/updateInfo',
+        method: 'PUT',
+        contentType: 'application/json',
+        data: JSON.stringify({ availability_dates: datesString }),
+        success: function(response) {
+            document.getElementById("submit-avb-message").innerHTML = "update successful";
+            document.getElementById("submit-avb-message").style.color = "green";
+        },
+        error: function() {
+            document.getElementById("submit-avb-message").innerHTML = "error";
+            document.getElementById("submit-avb-message").style.color = "red";
         }
     });
 }

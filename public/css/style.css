@@ -287,7 +287,7 @@ footer {
 .event-band-card {
     background-color: white;
     border: 1px solid #ddd;
-    border-left: 5px solid orange;
+    border-left: 3px solid orange;
     border-radius: 4px;
     padding: 20px;
     margin-bottom: 20px;
@@ -375,4 +375,32 @@ footer {
     border-radius: 8px;
     position: relative; /* otherwise my 'hide' button jumps out of the window */
     overflow-y: auto; /* scrolling if the text is longer than the window */
+}
+
+/* ==========================  AVABILITY CALENDAR CSS =========================== */
+.flatpickr-calendar.inline {
+    width: 100%; /* 100% width of calendar 'box' */
+    border: 1px solid rgb(231, 231, 231);
+    box-shadow: none;
+}
+
+.dayContainer,
+.flatpickr-rContainer, 
+.flatpickr-days {
+    min-width: 100% !important; /* width of dates inside the calendar 'box' */
+}
+
+.flatpickr-day { /* width of single days insde the calendar */
+    max-width: none !important;
+    min-height: 70px !important; /* height of a single day, if we did it above in .flatpickr-days then the size of them would be identical,
+    but the 'click' surface would be unchanged, so smaller than we want to */
+
+    line-height: 70px !important; /* otherwise text is not centered (OY) */
+    border-radius: 0 !important; /* by default they are almost round */
+}
+
+.flatpickr-day.selected, 
+.flatpickr-day.selected:hover {
+    background: orange !important;
+    border-color: orange !important;
 }

@@ -166,8 +166,8 @@ function bandInformation(bandId) {
 
             content.innerHTML = `
                 <div>
-                    <h2 style="color: orange;"><strong>${band.band_name}</strong></h2>
-                    <p><strong>Genres: </strong>${band.music_genres}<br><strong>Description:</strong>${band.band_description}</p>
+                    <h2 style="color: orange;"><strong>${band.band_name} </strong><span style="color: gray; font-size: 18px;">(ID: ${band.band_id})</span></h2>
+                    <p><strong>Genres: </strong>${band.music_genres}<br><strong>Description: </strong>${band.band_description}</p>
                 <div class="row">
                     <div class="col-md-6">
                         <h4 style="padding-bottom: 5px; border-bottom: 2px solid orange;">Upcoming Events</h4>
@@ -190,4 +190,128 @@ function bandInformation(bandId) {
 
 function closePopupWindow() {
     document.getElementById('band-popup-window').style.display = 'none';
+}
+
+// ======================= VERIFY LOCATION OF THE PRIVATE/PUBLIC EVENT =======================
+var event_location_verified = false; // in order to store lon/lat in our database, band owner will have to verify location (download the coordinates)
+
+function verifyEventLocation() {
+    var country = $('#event_country').val();
+    var city = $('#event_city').val();
+    var address = $('#event_address').val();
+    var msgDiv = $('#event-submit-message');
+
+    var full_address = address + " " + city + " " + country;
+    const xhr = new XMLHttpRequest();
+
+    xhr.addEventListener("readystatechange", function () {
+        if (this.readyState === this.DONE) {
+            try {
+                const response = JSON.parse(xhr.responseText);
+                if (!response || response.length === 0) {
+                    msgDiv.text("Couldn't find location, check city and address");
+                    event_location_verified = false;
+                } else {
+                    var location_data = response[0];
+                    $('#event_lat').val(parseFloat(location_data.lat));
+                    $('#event_lon').val(parseFloat(location_data.lon)); // convert to lon & lat
+                    event_location_verified = true;
+                    msgDiv.text("Location verified: " + location_data.display_name).css("color", "green");
+                }
+            } catch (e) {
+                msgDiv.text("Error");
+                event_location_verified = false;
+            }
+        }
+    });
+
+    xhr.open("GET", "https://forward-reverse-geocoding.p.rapidapi.com/v1/search?q=" + encodeURIComponent(full_address) + "&accept-language=en&polygon_threshold=0.0");
+    xhr.setRequestHeader("x-rapidapi-key", "6c6bf8d1e1mshc1ca0e713f01b86p1003bdjsn0e24e4fdb063"); // api-key
+    xhr.setRequestHeader("x-rapidapi-host", "forward-reverse-geocoding.p.rapidapi.com");
+    xhr.send();
+}
+
+// ================================ CONVERSTAION WITH BAND/USER FUNCTIONS ============================
+function closeChat() {
+    const container = $('#conversation-with-user');
+    container.empty();
+    container.closest('.aside-box').hide(); // hide aside-box
+}
+
+function loadChatMessages(privateEventId) {
+    $.ajax({
+        url: '/RegistrationAndLogin/checkSession',
+        method: 'GET',
+        success: function(sessionResponse) {
+            const myRole = sessionResponse.type;
+
+            $.ajax({
+                url: '/api/chat/getMessages',
+                method: 'GET',
+                data: { private_event_id: privateEventId },
+                success: function(response) {
+                    const msgBox = $('#chat-messages-box');
+                    
+                    if (!response.success) return;
+
+                    if (response.messages.length === 0) { // if there are no messages
+                        msgBox.html('<p style="text-align:center; color:gray; margin-top: 10px;">No messages yet</p>');
+                        return;
+                    }
+
+                    let htmlContent = '';
+
+                    response.messages.forEach(msg => {
+                        const isMe = (msg.sender === myRole);
+                        const msgDate =new Date(msg.date_time);
+                        const msgTime = msgDate.toLocaleDateString() + ' ' + msgDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                        let rowClass = '';
+
+                        if (isMe) {
+                            rowClass = 'message-right';
+                        } else {
+                            rowClass = 'message-left';
+                        }
+
+                        htmlContent += `
+                            <div class="message-row ${rowClass}">
+                                <p style="margin-bottom: 2px; background: rgb(236, 236, 236); border-radius: 5px; padding: 8px; max-width: 75%; word-wrap: break-word;">${msg.message}<br></p>
+                                <p style="font-size: 12px;">${msgTime}</p>
+                            </div>
+                        `;
+                    });
+                    msgBox.html(htmlContent);
+                },
+                error: function(err) {
+                    console.error("Error loading messages", err);
+                }
+            });
+        }
+    });
+}
+
+function sendChatMessage(e, privateEventId, recipientId) {
+    e.preventDefault(); 
+    const inputField = $('#chat-message-input');
+    const message = inputField.val();
+
+    if (!message.trim()) return;
+
+    $.ajax({
+        url: '/api/chat/sendMessage',
+        method: 'POST',
+        contentType: 'application/json',
+        data: JSON.stringify({
+            private_event_id: privateEventId,
+            message: message,
+            recipient_id: recipientId
+        }),
+        success: function(response) {
+            inputField.val('');
+            loadChatMessages(privateEventId);
+        },
+        error: function() {
+            alert('Server error');
+        }
+    });
 }
