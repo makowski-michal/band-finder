@@ -83,6 +83,17 @@ function handlePublicEventSubmit(event) {
             $('#event-submit-message').text("Success, the event has been saved").css("color", "green");
             resetEventForm();
             loadMyPublicEvents();
+            
+            // refresh availability calendar
+            $.ajax({
+                url: '/RegistrationAndLogin/getBandInfo',
+                method: 'GET',
+                success: function (response) {
+                    if (response && response.availability_dates !== undefined) {
+                        initAvailabilityCalendar(response.availability_dates);
+                    }
+                }
+            });
         },
         error: function (xhr) {
             $('#event-submit-message').text("Save error: " + xhr.status);
@@ -183,6 +194,7 @@ function loadMyPrivateEvents() {
                             </div>
                             <button class="password-show-hide" onclick="updatePrivateStatus(${event.private_event_id}, 'to be done')">Accept (To be done)</button>
                             <button class="password-show-hide" onclick="updatePrivateStatus(${event.private_event_id}, 'rejected')">Reject</button>
+                            <div id="button-response"></div>
                         `;
                     } else if (event.status === 'rejected') {
                         responseHtml = `
@@ -208,6 +220,7 @@ function loadMyPrivateEvents() {
                                 Price: ${event.price} €<br>
                             </div>
                             ${responseHtml}
+                            <div id="button-reponse"></div>
                         </div>
                     `);
                 });
@@ -219,9 +232,11 @@ function loadMyPrivateEvents() {
 }
 
 function updatePrivateStatus(eventId, newStatus) {
+    const messageDiv = document.getElementById('button-response');
     const decision = $(`#decision-${eventId}`).val();
     if (!decision && newStatus === 'rejected') {
-        alert("Please provide a justification for rejection");
+        messageDiv.innerHTML= "Please provide a justification for rejection";
+        messageDiv.style.color ="red";
         return;
     }
 
@@ -232,10 +247,14 @@ function updatePrivateStatus(eventId, newStatus) {
         data: JSON.stringify({
             private_event_id: eventId,
             status: newStatus,
-            band_decision: decision
+            band_decision: decision || null
         }),
         success: function () {
             loadMyPrivateEvents();
+        },
+        error: function(xhr) {
+            messageDiv.innerHTML= "Error";
+            messageDiv.style.color ="red";
         }
     });
 }
@@ -250,7 +269,19 @@ function deletePrivateEvent(eventId) {
         method: 'DELETE',
         success: function (response) {
             if (response.success) {
+                alert('Event deleted successfully');
                 loadMyPrivateEvents(); // refresh
+                
+                // refresh calendar
+                $.ajax({
+                    url: '/RegistrationAndLogin/getBandInfo',
+                    method: 'GET',
+                    success: function (response) {
+                        if (response && response.availability_dates !== undefined) {
+                            initAvailabilityCalendar(response.availability_dates);
+                        }
+                    }
+                });
             }
         },
         error: function (xhr) {
@@ -299,18 +330,51 @@ function checkBandIdAndShow() {
 
 // ========================= BAND PICK YOUR AVAILABILITY DATES ========================
 let calendarWindow;
+let occupiedDatesGlobal = [];
 
 function initAvailabilityCalendar(existingAvailabilityDates) {
     let downloadedDates = [];
     if (existingAvailabilityDates) {
-        downloadedDates = existingAvailabilityDates.split(', ');
+        downloadedDates = existingAvailabilityDates.split(', ').map(d => d.trim()).filter(d => d !== '');
     }
 
-    calendarWindow = flatpickr("#availability-calendar", {
-        inline: true, // calendar is opened always
-        mode: "multiple", // you can select multiple dates at once
-        dateFormat: "Y-m-d",
-        defaultDate: downloadedDates // loading calendar with previous availability dates
+    // download taken/occupied dates
+    $.ajax({
+        url: '/api/getOccupiedDatesForBand',
+        method: 'GET',
+        success: function(response) {
+            if (response.success) {
+                occupiedDatesGlobal = response.occupiedDates;
+                
+                calendarWindow = flatpickr("#availability-calendar", {
+                    inline: true, // calendar is opened always
+                    mode: "multiple", // you can select multiple dates at once
+                    dateFormat: "Y-m-d",
+                    defaultDate: downloadedDates, // loading calendar with previous availability dates
+                    minDate: "today", // can't choose dates in the past
+                    disable: [ // we need to check for each date if it can be picked (if it doesn't have an event just yet)
+                        function(date) {
+                            const year = date.getFullYear();
+                            const month = String(date.getMonth() + 1).padStart(2, '0');
+                            const day = String(date.getDate()).padStart(2, '0');
+                            const dateStr = `${year}-${month}-${day}`;
+                            
+                            const isOccupied = occupiedDatesGlobal.includes(dateStr);
+                            return isOccupied;
+                        }
+                    ]
+                });
+            }
+        },
+        error: function() {
+            calendarWindow = flatpickr("#availability-calendar", { // refresh
+                inline: true,
+                mode: "multiple",
+                dateFormat: "Y-m-d",
+                defaultDate: downloadedDates,
+                minDate: "today"
+            });
+        }
     });
 }
 
@@ -326,11 +390,11 @@ function saveAvailability() {
         contentType: 'application/json',
         data: JSON.stringify({ availability_dates: datesString }),
         success: function(response) {
-            document.getElementById("submit-avb-message").innerHTML = "update successful";
+            document.getElementById("submit-avb-message").innerHTML = "Availability updated successfully";
             document.getElementById("submit-avb-message").style.color = "green";
         },
         error: function() {
-            document.getElementById("submit-avb-message").innerHTML = "error";
+            document.getElementById("submit-avb-message").innerHTML = "Error updating availability";
             document.getElementById("submit-avb-message").style.color = "red";
         }
     });

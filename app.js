@@ -245,8 +245,18 @@ app.post('/RegistrationAndLogin/login', async (req, res) => {
                 return res.status(401).json({ success: false, error: 'This is a user account. Please use User Login.' });
             }
         }
-        return res.status(401).json({ success: false, error: 'Invalid username or password' });
 
+        else if (login_type === 'admin'){ 
+            if (username === "admin" && password === "admiN12@*") {
+                    req.session.user = {
+                        username: username,
+                        type: 'admin'
+                    };
+                    return res.status(200).json({ success: true, redirect: 'admin_panel.html' });
+            }
+        }
+
+        return res.status(401).json({ success: false, error: 'Invalid username or password' });
     } catch (error) {
         console.error(error);
         res.status(500).json({ success: false, error: 'Server error' });
@@ -275,9 +285,6 @@ app.get('/RegistrationAndLogin/getUserInfo', async (req, res) => {
         const users = await getAllUsers(); // get all users from db
         const currentUser = users.find(u => u.user_id === req.session.user.user_id); // find matching user in db
 
-        if (!currentUser) {
-            return res.status(404).json({ error: 'user not found' }); // session exists but user missing
-        }
         res.status(200).json(currentUser); // return full user info
     } catch (error) {
         res.status(500).json({ error: 'server error' }); // something broke on server
@@ -300,30 +307,17 @@ app.get('/RegistrationAndLogin/getBandInfo', async (req, res) => {
 });
 
 app.put('/RegistrationAndLogin/updateInfo', async (req, res) => {
-    // 1. Sprawdź czy ktokolwiek jest zalogowany
-    if (!req.session || !req.session.user) {
-        return res.status(403).json({ success: false, error: 'Not logged in' });
-    }
-
     const updates = req.body;
     const username = req.session.user.username;
-    const userType = req.session.user.type; // Pobieramy typ z sesji ('user' lub 'band')
+    const userType = req.session.user.type;
 
     try {
         let result;
 
-        // 2. Wybierz odpowiednią funkcję bazy danych na podstawie typu
         if (userType === 'user') {
             result = await updateUser(username, updates);
         } else if (userType === 'band') {
-            result = await updateBand(username, updates); // Musisz mieć tę funkcję w databaseQueriesBands.js
-        } else {
-            return res.status(400).json({ success: false, error: 'Invalid user type' });
-        }
-
-        // 3. Sprawdź wynik
-        if (result.includes('No user found') || result.includes('No band found')) {
-            return res.status(404).json({ success: false });
+            result = await updateBand(username, updates);
         }
 
         res.status(200).json({ success: true });
@@ -566,16 +560,7 @@ app.get('/api/getWeatherForecast', async (req, res) => {
 
     try {
         const weatherResponse = await fetch_function(url);
-
-        if (!weatherResponse.ok) {
-            throw new Error(`API request failed. HTTP status: ${weatherResponse.status}`);
-        }
-
         const data = await weatherResponse.json();
-
-        if (data.cod !== '200' && data.cod !== 200) {
-            throw new Error(`OpenWeatherMap Error: ${data.message || 'Unknown API issue'}`);
-        }
 
         const dailyForecasts = {};
         const today = new Date().toISOString().split('T')[0];
@@ -618,7 +603,7 @@ app.get('/api/getWeatherForecast', async (req, res) => {
     }
 });
 
-// ==================== BAND PUBLIC EVENTS MANAGEMENT ====================
+// ============================== BAND PUBLIC EVENTS MANAGEMENT ==============================
 // 1. DOWNLOADING EVENTS OF A PARTICULAR BAND
 app.get('/api/getMyPublicEvents', async (req, res) => {
     try {
@@ -642,28 +627,8 @@ app.get('/api/getMyPublicEvents', async (req, res) => {
 // 2. ADDING AN EVENT
 app.post('/api/addPublicEvent', async (req, res) => {
     const { event_type, event_datetime, event_description, participants_price, event_city, event_address, event_lat, event_lon } = req.body;
-
-    try {
-        await insertPublicEvent({
-            band_id: req.session.user.band_id,
-            event_type,
-            event_datetime,
-            event_description,
-            participants_price: parseFloat(participants_price),
-            event_city,
-            event_address,
-            event_lat: parseFloat(event_lat),
-            event_lon: parseFloat(event_lon)
-        });
-        res.json({ success: true });
-    } catch (e) {
-        res.status(500).json({ error: e.message });
-    }
-});
-
-// 3. UPDATING THE EVENT
-app.put('/api/updatePublicEvent', async (req, res) => {
-    const { public_event_id, event_type, event_datetime, event_description, participants_price, event_city, event_address, event_lat, event_lon } = req.body;
+    const band_id = req.session.user.band_id;
+    const targetDate = event_datetime.split('T')[0];
 
     try {
         const mysql = require('mysql2/promise');
@@ -674,15 +639,100 @@ app.put('/api/updatePublicEvent', async (req, res) => {
             database: "cs359_project"
         });
 
-        await conn.execute(`
-            UPDATE public_events SET 
-            event_type=?, event_datetime=?, event_description=?, participants_price=?, event_city=?, event_address=?, event_lat=?, event_lon=?
-            WHERE public_event_id=? AND band_id=?
-        `, [event_type, event_datetime, event_description, participants_price, event_city, event_address, event_lat, event_lon, public_event_id, req.session.user.band_id]);
+        // check if the date is in the avalability dates
+        const [bandRows] = await conn.execute('SELECT availability_dates FROM bands WHERE band_id = ?', [band_id]);
+        
+        if (!bandRows[0].availability_dates) {
+            await conn.end();
+            return res.status(400).json({ error: 'You have not marked any dates as available. Please set your availability first' });
+        }
+
+        const availableDates = bandRows[0].availability_dates.split(', ').map(d => d.trim());
+        
+        if (!availableDates.includes(targetDate)) {
+            await conn.end();
+            return res.status(400).json({ error: 'You can only add events on dates marked as available in your calendar' });
+        }
+
+        await conn.end();
+
+        // if validation has been passed, we add the event
+        await insertPublicEvent({
+            band_id: band_id,
+            event_type,
+            event_datetime,
+            event_description,
+            participants_price: parseFloat(participants_price),
+            event_city,
+            event_address,
+            event_lat: parseFloat(event_lat),
+            event_lon: parseFloat(event_lon)
+        });
+
+        // automatically delete the date from the avalability dates
+        await removeDateFromAvailability(band_id, targetDate);
 
         res.json({ success: true });
     } catch (e) {
         res.status(500).json({ error: e.message });
+    }
+});
+
+app.put('/api/updatePublicEvent', async (req, res) => {
+    const { public_event_id, event_type, event_datetime, event_description, participants_price, event_city, event_address, event_lat, event_lon } = req.body;
+    const band_id = req.session.user.band_id;
+    const newTargetDate = event_datetime.split('T')[0];
+
+    try {
+        const mysql = require('mysql2/promise');
+        const conn = await mysql.createConnection({
+            host: "localhost",
+            user: "root",
+            password: "",
+            database: "cs359_project"
+        });
+
+        // Pobieramy STARĄ datę eventu (przed edycją)
+        const [oldEventRows] = await conn.execute(
+            'SELECT event_datetime FROM public_events WHERE public_event_id = ? AND band_id = ?',
+            [public_event_id, band_id]
+        );
+
+        const oldDate = new Date(oldEventRows[0].event_datetime).toISOString().split('T')[0];
+
+        if (oldDate !== newTargetDate) {
+            // we check if the new date is in avalability_dates
+            const [bandRows] = await conn.execute('SELECT availability_dates FROM bands WHERE band_id = ?', [band_id]);
+            
+            if (!bandRows[0].availability_dates) {
+                await conn.end();
+                return res.status(400).json({ error: 'You have not marked any dates as available. Please set your availability first' });
+            }
+
+            const availableDates = bandRows[0].availability_dates.split(', ').map(d => d.trim());
+            
+            if (!availableDates.includes(newTargetDate)) {
+                await conn.end();
+                return res.status(400).json({ error: 'You can only schedule events on dates marked as available in your calendar' });
+            }
+        }
+
+        // updating event in the databse
+        await conn.execute(`
+            UPDATE public_events SET 
+            event_type=?, event_datetime=?, event_description=?, participants_price=?, event_city=?, event_address=?, event_lat=?, event_lon=?
+            WHERE public_event_id=? AND band_id=?
+        `, [event_type, event_datetime, event_description, participants_price, event_city, event_address, event_lat, event_lon, public_event_id, band_id]);
+        await conn.end();
+
+        if (oldDate !== newTargetDate) { // if the date has changed
+            await addDateToAvailability(band_id, oldDate); // we add the old date to the avalability dates
+            await removeDateFromAvailability(band_id, newTargetDate); // we delete the new date from the avalability_dates
+        }
+
+        res.json({ success: true });
+    } catch (e) {
+        res.status(500).json({ error: 'Error, are you sure, you have you declared your band is avaliable on this date in "Your Avalability" section?' });
     }
 });
 
@@ -690,20 +740,34 @@ app.put('/api/updatePublicEvent', async (req, res) => {
 app.delete('/api/deletePublicEvent/:id', async (req, res) => {
     try {
         const mysql = require('mysql2/promise');
-        const conn = await mysql.createConnection({ host: "localhost", user: "root", password: "", database: "cs359_project" });
+        const conn = await mysql.createConnection({ 
+            host: "localhost", 
+            user: "root", 
+            password: "", 
+            database: "cs359_project" 
+        });
 
-        const [rows] = await conn.execute('SELECT * FROM public_events WHERE public_event_id = ? AND band_id = ?', [req.params.id, req.session.user.band_id]);
+        const [rows] = await conn.execute(
+            'SELECT event_datetime FROM public_events WHERE public_event_id = ? AND band_id = ?', 
+            [req.params.id, req.session.user.band_id]
+        );
 
-        if (rows.length === 0) return res.status(404).json({ error: "Event not found" });
+        const eventDateFull = new Date(rows[0].event_datetime);
+        const eventDate = eventDateFull.toISOString().split('T')[0];
 
         await conn.execute('DELETE FROM public_events WHERE public_event_id = ?', [req.params.id]);
+        await conn.end();
+
+        // automatically add the date back to avalability_dates
+        await addDateToAvailability(req.session.user.band_id, eventDate);
+
         res.json({ success: true });
     } catch (e) {
         res.status(500).json({ error: e.message });
     }
 });
 
-// ==================== MANAGING PRIVATE EVENTS BY BANDS ====================
+// ============================== MANAGING PRIVATE EVENTS BY BANDS ==================================
 app.get('/api/getMyPrivateEvents', async (req, res) => { // downloading private events for the band
     try {
         const mysql = require('mysql2/promise');
@@ -734,7 +798,6 @@ app.get('/api/getMyPrivateEvents', async (req, res) => { // downloading private 
     }
 });
 
-
 app.put('/api/updatePrivateEventStatus', async (req, res) => { // acceptance or rejection
     const { private_event_id, status, band_decision } = req.body;
 
@@ -746,6 +809,16 @@ app.put('/api/updatePrivateEventStatus', async (req, res) => { // acceptance or 
             password: "",
             database: "cs359_project"
         });
+
+        // event info before update
+        const [eventRows] = await conn.execute(
+            'SELECT band_id, event_datetime, status as old_status FROM private_events WHERE private_event_id = ?',
+            [private_event_id]
+        );
+
+        const event = eventRows[0];
+        const eventDateFull = new Date(event.event_datetime);
+        const eventDate = eventDateFull.toISOString().split('T')[0];
 
         if (band_decision !== undefined) { // if band updates and has band_decision
             await conn.execute(
@@ -759,13 +832,21 @@ app.put('/api/updatePrivateEventStatus', async (req, res) => { // acceptance or 
             );
         }
 
+        await conn.end();
+
+        // managing avalability dates
+        
+        if (status === 'rejected') { // if new status is rejected -> date is back to avability date
+            await addDateToAvailability(event.band_id, eventDate);
+        }
+
         res.json({ success: true });
     } catch (e) {
         res.status(500).json({ error: e.message });
     }
 });
 
-app.delete('/api/deletePrivateEvent/:id', async (req, res) => { // deleting rejected event
+app.delete('/api/deletePrivateEvent/:id', async (req, res) => {
     try {
         const mysql = require('mysql2/promise');
         const conn = await mysql.createConnection({
@@ -775,20 +856,21 @@ app.delete('/api/deletePrivateEvent/:id', async (req, res) => { // deleting reje
             database: "cs359_project"
         });
 
+        // download info before deleting
         const [rows] = await conn.execute(
-            'SELECT status FROM private_events WHERE private_event_id = ? AND band_id = ?',
-            [req.params.id, req.session.user.band_id]
+            'SELECT status, event_datetime, band_id FROM private_events WHERE private_event_id = ?',
+            [req.params.id]
         );
 
-        if (rows.length > 0 && rows[0].status === 'rejected') {
-            await conn.execute('DELETE FROM private_events WHERE private_event_id = ?', [req.params.id]);
-            res.json({ success: true });
-        }
+        const event = rows[0];
+
+        await conn.execute('DELETE FROM private_events WHERE private_event_id = ?', [req.params.id]);
+        await conn.end();
+        res.json({ success: true });
     } catch (e) {
         res.status(500).json({ error: e.message });
     }
 });
-
 
 // ============================= MESSAGES BAND/USER =============================
 // Downloading messeges
@@ -905,12 +987,15 @@ app.get('/api/getBandDetails/:id', async (req, res) => {
     }
 });
 
-// ============================== SENDING REQUEST FOR A PRIVATE EVENT TO DATABSE ==============================
+// =================================== SENDING REQUEST FOR A PRIVATE EVENT TO DATABSE ==============================
 app.post('/api/addPrivateEvent', async (req, res) => {
     const { 
         band_id, event_type, event_datetime, event_city, 
         event_address, event_description, price, event_lat, event_lon 
     } = req.body;
+
+    const targetDate = event_datetime.split('T')[0];
+    const targetDateOnly = targetDate.split(' ')[0];
 
     try {
         const mysql = require('mysql2/promise');
@@ -933,6 +1018,10 @@ app.post('/api/addPrivateEvent', async (req, res) => {
         );
 
         await conn.end();
+
+        // automatically remove the date from avalability_datse, while the status is requested
+        await removeDateFromAvailability(band_id, targetDateOnly);
+
         res.json({ success: true });
     } catch (e) {
         res.status(500).json({ error: e.message });
@@ -940,11 +1029,9 @@ app.post('/api/addPrivateEvent', async (req, res) => {
 });
 
 
-// ============================= REST API FOR REST_TEST.HTML =============================
+// ================================= REST API FOR REVIEWS =================================
 // add new review (post)
 app.post('/review', async (req, res) => { // creates a post endpoint for adding a review
-    console.log('rest api post request was successfully created!!'); // prints info to console
-
     const { band_name, sender, review, rating } = req.body; // gets values sent from client
     if (!band_name || !sender || !review || !rating) { return res.status(406).json({ error: 'missing required fields' }); }
     if (rating < 1 || rating > 5) { return res.status(406).json({ error: 'rating must be between 1 and 5' }); }
@@ -979,10 +1066,36 @@ app.post('/review', async (req, res) => { // creates a post endpoint for adding 
     }
 });
 
-// get reviews of a given band (get)
+// ======================== SORTING PUBLIC EVENTS BASED ON DRIVING DISTANCE =====================
+app.post('/api/getDrivingDistances', async (req, res) => {
+    const { origin, destinations } = req.body;
+
+    const originsStr = `${origin.lat},${origin.lon}`;
+    const destinationsStr = destinations.map(d => `${d.lat},${d.lon}`).join(';');
+
+    const settings = { // from https://rapidapi.com/trueway/api/trueway-matrix/
+        method: 'GET',
+        headers: {
+            'x-rapidapi-key': '',
+            'x-rapidapi-host': 'trueway-matrix.p.rapidapi.com'
+        }
+    };
+    // from https://rapidapi.com/trueway/api/trueway-matrix/
+    const url = `https://trueway-matrix.p.rapidapi.com/CalculateDrivingMatrix?origins=${encodeURIComponent(originsStr)}&destinations=${encodeURIComponent(destinationsStr)}`; 
+
+    try {
+        const response = await fetch_function(url, settings);
+        const data = await response.json();
+        res.json(data);
+    } catch (error) {
+        res.status(500).json({ error: "Error" });
+    }
+});
+
+// ===================== get reviews ============================
 app.get('/reviews/:band_name', async (req, res) => {
     const { band_name } = req.params; // gets band name from url
-    const { ratingFrom, ratingTo } = req.query; // gets rating filters from url
+    const { ratingFrom, ratingTo, pickedStatus } = req.query; // gets rating filters from url
 
     try {
         const mysql = require('mysql2/promise'); // loads mysql library
@@ -994,12 +1107,17 @@ app.get('/reviews/:band_name', async (req, res) => {
             database: "cs359_project"
         });
 
-        let query = 'SELECT * FROM reviews WHERE status = ?';
-        let params = ['published'];
+        let query = 'SELECT * FROM reviews WHERE 1=1';
+        let params = [];
 
         if (band_name !== 'all') {
             query += ' AND band_name = ?'; // adds band filter
             params.push(band_name); // adds band name to parameters
+        }
+
+        if (pickedStatus && pickedStatus !== 'all') {
+            query += ' AND status = ?';
+            params.push(pickedStatus);
         }
 
         if (ratingFrom && ratingTo) {
@@ -1026,9 +1144,9 @@ app.get('/reviews/:band_name', async (req, res) => {
     }
 });
 
-// update status of review (put)
-app.put('/reviewStatus/:review_id/:status', async (req, res) => {
-    const { review_id, status } = req.params; // gets review id and new status from url
+// ============================ update reviews ============================
+app.put('/reviewStatus/:review_id/:status/:date_time', async (req, res) => {
+    const { review_id, status, date_time } = req.params; // gets review id and new status from url
 
     try {
         const mysql = require('mysql2/promise'); // loads mysql library
@@ -1040,22 +1158,9 @@ app.put('/reviewStatus/:review_id/:status', async (req, res) => {
             database: "cs359_project"
         });
 
-        const [reviews] = await connection.execute( // checks if review exists
-            'SELECT * FROM reviews WHERE review_id = ?',
-            [review_id]
-        );
-
-        if (reviews.length === 0) { // if no review found
-            return res.status(403).json({ error: 'review does not exist' }); // sends error
-        }
-
-        if (reviews[0].status !== 'pending') { // only pending reviews can be updated
-            return res.status(406).json({ error: 'can only update pending reviews' }); // sends error
-        }
-
         await connection.execute( // updates review status in db
-            'UPDATE reviews SET status = ? WHERE review_id = ?',
-            [status, review_id]
+            'UPDATE reviews SET status = ?, date_time = ? WHERE review_id = ?',
+            [status, date_time, review_id]
         );
 
         res.status(200).json({ message: `review status updated to ${status}` }); // sends success message
@@ -1065,9 +1170,9 @@ app.put('/reviewStatus/:review_id/:status', async (req, res) => {
     }
 });
 
-// 4. delete review (delete)
-app.delete('/reviewDeletion/:review_id', async (req, res) => { // creates a delete endpoint
-    const { review_id } = req.params; // gets review id from url
+// =============================== deleting users ===========================
+app.delete('/deleteUser/:user_id', async (req, res) => { // creates a delete endpoint
+    const { user_id } = req.params; // gets review id from url
 
     try {
         const mysql = require('mysql2/promise'); // loads mysql library
@@ -1079,19 +1184,7 @@ app.delete('/reviewDeletion/:review_id', async (req, res) => { // creates a dele
             database: "cs359_project"
         });
 
-        const [reviews] = await connection.execute( // checks if review exists
-            'SELECT * FROM reviews WHERE review_id = ?',
-            [review_id]
-        );
-
-        if (reviews.length === 0) { // if no review found
-            return res.status(403).json({ error: 'review does not exist' }); // sends error
-        }
-
-        await connection.execute( // deletes the review from db
-            'DELETE FROM reviews WHERE review_id = ?',
-            [review_id]
-        );
+        await connection.execute( 'DELETE FROM users WHERE user_id = ?', [user_id] );
 
         res.status(200).json({ message: 'review deleted successfully' }); // sends success response
 
@@ -1100,7 +1193,191 @@ app.delete('/reviewDeletion/:review_id', async (req, res) => { // creates a dele
     }
 });
 
+// ===================== get users ============================
+app.get('/users/:user_name', async (req, res) => {
+    const { user_name } = req.params; // gets band name from url
 
+    try {
+        const mysql = require('mysql2/promise'); // loads mysql library
+        const connection = await mysql.createConnection({ // creates db connection
+            host: "localhost", // db host
+            port: 3306, // db port
+            user: "root",
+            password: "",
+            database: "cs359_project"
+        });
+
+        let query = 'SELECT * FROM users WHERE 1=1';
+        let params = [];
+
+        if (user_name !== 'all') {
+            query += ' AND username = ?'; // adds username filter
+            params.push(user_name); // adds user name to parameters
+        }
+
+        const [rows] = await connection.execute(query, params); // executes query in db
+
+        res.status(200).json({  // sends results to client
+            data: rows, // all returned rows
+            count: rows.length // number of results
+        });
+
+    } catch (error) {
+        res.status(500).json({ error: 'server error' });
+    }
+});
+
+// ============================= ADMIN STATISTICS =============================
+app.get('/api/admin/statistics', async (req, res) => {
+    try {
+        const mysql = require('mysql2/promise');
+        const conn = await mysql.createConnection({
+            host: "localhost",
+            user: "root",
+            password: "",
+            database: "cs359_project"
+        });
+
+        // COUNTING NUMBER OF BANDS IN PARTICULAR CITIES - CHART 1
+        const [bandsByCity] = await conn.execute(
+            'SELECT band_city as city, COUNT(*) as count FROM bands GROUP BY band_city'
+        );
+
+        // COUNTING USER AND BAND NUMBER - CHART 2
+        const [[{userCount}]] = await conn.execute('SELECT COUNT(*) as userCount FROM users');
+        const [[{bandCount}]] = await conn.execute('SELECT COUNT(*) as bandCount FROM bands');
+
+        // COUNTING PRIVATE AND PUBLIC EVENTS - CHART 3
+        const [[{publicCount}]] = await conn.execute('SELECT COUNT(*) as publicCount FROM public_events');
+        const [[{privCount}]] = await conn.execute('SELECT COUNT(*) as privCount FROM private_events');
+
+        // TOTAL REVENUE - 4
+        const [[{totalRevenue}]] = await conn.execute(
+            'SELECT SUM(price * 0.15) as totalRevenue FROM private_events WHERE status = "done"'
+        );
+
+        await conn.end();
+
+        res.json({
+            success: true,
+            bandsByCity,
+            revenue: totalRevenue || 0,
+            counts: {
+                users: userCount,
+                bands: bandCount,
+                publicEvents: publicCount,
+                privateEvents: privCount
+            }
+        });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+
+// ===================== helping function to save, delete avalability_dates =======================
+async function removeDateFromAvailability(band_id, dateToRemove) {
+    const mysql = require('mysql2/promise');
+    const conn = await mysql.createConnection({
+        host: "localhost",
+        user: "root",
+        password: "",
+        database: "cs359_project"
+    });
+
+    try {
+        const [bandRows] = await conn.execute('SELECT availability_dates FROM bands WHERE band_id = ?', [band_id]);
+        
+        if (bandRows.length > 0 && bandRows[0].availability_dates) {
+            let datesArray = bandRows[0].availability_dates.split(', ').map(d => d.trim()).filter(d => d !== '');
+            datesArray = datesArray.filter(date => date !== dateToRemove);
+            
+            const newDatesString = datesArray.length > 0 ? datesArray.join(', ') : '';
+            await conn.execute('UPDATE bands SET availability_dates = ? WHERE band_id = ?', [newDatesString, band_id]);
+        }
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    } finally {
+        await conn.end();
+    }
+}
+
+async function addDateToAvailability(band_id, dateToAdd) {
+    const mysql = require('mysql2/promise');
+    const conn = await mysql.createConnection({
+        host: "localhost",
+        user: "root",
+        password: "",
+        database: "cs359_project"
+    });
+
+    try {
+        const [bandRows] = await conn.execute('SELECT availability_dates FROM bands WHERE band_id = ?', [band_id]);
+        
+        if (bandRows.length > 0) {
+            let datesArray = [];
+            if (bandRows[0].availability_dates) {
+                datesArray = bandRows[0].availability_dates.split(', ').map(d => d.trim()).filter(d => d !== '');
+            }
+            
+            if (!datesArray.includes(dateToAdd)) {
+                datesArray.push(dateToAdd);
+                datesArray.sort(); // sort chronologic
+                const newDatesString = datesArray.join(', ');
+                
+                await conn.execute('UPDATE bands SET availability_dates = ? WHERE band_id = ?', [newDatesString, band_id]);
+            }
+        }
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    } finally {
+        await conn.end();
+    }
+}
+
+
+app.get('/api/getOccupiedDatesForBand', async (req, res) => {
+    try {
+        const mysql = require('mysql2/promise');
+        const conn = await mysql.createConnection({
+            host: "localhost",
+            user: "root",
+            password: "",
+            database: "cs359_project"
+        });
+
+        const band_id = req.session.user.band_id;
+        const today = new Date().toISOString().split('T')[0];
+
+        const [publicEvents] = await conn.execute( // download public events
+            `SELECT public_event_id, event_type, event_datetime, 
+                    DATE_FORMAT(event_datetime, '%Y-%m-%d') as event_date 
+             FROM public_events 
+             WHERE band_id = ?`,
+            [band_id]
+        );
+
+        const [privateEvents] = await conn.execute( // download all private events besides "rejected"
+            `SELECT private_event_id, event_type, event_datetime, status,
+                    DATE_FORMAT(event_datetime, '%Y-%m-%d') as event_date 
+             FROM private_events 
+             WHERE band_id = ? AND status != 'rejected'`,
+            [band_id]
+        );
+
+        await conn.end();
+        const futureDates = [ // only dates in the future
+            ...publicEvents.filter(e => e.event_date >= today).map(e => e.event_date),
+            ...privateEvents.filter(e => e.event_date >= today).map(e => e.event_date)
+        ];
+        const uniqueDates = [...new Set(futureDates)];
+
+        res.json({ success: true, occupiedDates: uniqueDates });
+
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
 
 
 // 404 handler for all other routes - return a simple message
@@ -1111,5 +1388,6 @@ app.use((req, res) => {
 // start the server and listen on configured PORT
 app.listen(PORT, () => {  // iniial app.js from hy359_A3_project_2025-26_start_code
     console.log(`Server running on http://localhost:${PORT}`);
-    console.log(`Open http://localhost:3000/html/guest.html`);
+    console.log(`Open http://localhost:3000/html/guest.html for guest login`);
+    console.log(`Open http://localhost:3000/html/admin_login.html for admin login`);
 });

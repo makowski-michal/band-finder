@@ -194,15 +194,22 @@ function executeFilterPrompt(type, prompt, button, container) {
 // =================================== RENDERING FILTERED EVENTS BASED ON PROMPT OR FILTERS ===================================
 function renderEvents(events, container) {
     if (events && events.length > 0) {
+        container.empty();
+        
         events.forEach(function (event) {
             const eventDate = new Date(event.event_datetime);
             const formattedDate = eventDate.toLocaleDateString() + ' ' + eventDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
             // const priceDisplay = event.participants_price + " euro";
             const priceDisplay = (parseFloat(event.participants_price) || 0).toFixed(2) + " euro";
+            let drivingDistance = '';
+            if (event.driving_distance) {
+                drivingDistance = `<div>Distance: ${event.driving_distance} km</div>`;
+            }
 
             const eventHtml = `
             <div class="event-band-card">
                 <h3>${event.event_type} - ${event.band_name}</h3>
+                ${drivingDistance}
                 <div>
                     ${formattedDate} <br>
                     ${event.event_city}, ${event.event_address}

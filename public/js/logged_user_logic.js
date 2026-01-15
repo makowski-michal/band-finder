@@ -32,7 +32,7 @@ function addReview(event) {
     };
     
     $.ajax({
-        url: '/review', // endpoint in the database (folder)
+        url: '/review',
         method: 'POST', // http method is post
         contentType: 'application/json', // tells server that data is json
         data: JSON.stringify(data), // converts js object to json string
@@ -80,18 +80,26 @@ function openCalendarPrivEvents(bandInfo) {
     let downloadedDates = bandInfo.availability_dates;
 
     if (downloadedDates) {
-        let existingAvailabilityDates = downloadedDates.split(', ');
+        let existingAvailabilityDates = downloadedDates.split(', ').filter(d => d.trim() !== '');
+        
+        if (existingAvailabilityDates.length === 0) {
+            $('#continue-with-res').empty();
+            document.getElementById("availability-calendar").innerHTML = "<h4>Looks like this band has no available dates anytime soon :(</h4>";
+            return;
+        }
+        
         calendarWindow = flatpickr("#availability-calendar", {
             inline: true, // calendar is opened always
             mode: "single",
             dateFormat: "Y-m-d",
-            enable: existingAvailabilityDates,
-            onChange: function(dateStr) {
-                if (dateStr) {
+            enable: existingAvailabilityDates, // availability dates of a band
+            minDate: "today", // only dates in the future are enabled
+            onChange: function(selectedDates) {
+                if (selectedDates.length > 0) {
                     continueWithReservation(bandInfo); 
                 }
             }
-    });
+        });
     } else {
         $('#continue-with-res').empty();
         document.getElementById("availability-calendar").innerHTML = "<h4>Looks like this band has no available dates anytime soon :(</h4>";
@@ -304,4 +312,35 @@ function donePrivateEvent(eventId) {
         }
     });
     closeChat();
+}
+
+// ============================== SORTING BASED ON DRIVING DISTANCE =========================
+async function handleDistanceSort() {
+    const user = await $.get('/RegistrationAndLogin/getUserInfo');
+    $.get('/getPublicEvents', function(response) {
+        const events = response.data;
+
+        $.ajax({ // so the api is hidden in app.js
+            url: '/api/getDrivingDistances',
+            method: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({
+                origin: { lat: user.lat, lon: user.lon }, // sending users coordinates
+                destinations: events.map(e => ({ lat: e.event_lat, lon: e.event_lon })) // sending events coordinates
+            }),
+            success: function (matrixResponse) {
+                if (matrixResponse.distances && matrixResponse.distances[0]) {
+                    events.forEach(function (event, index) {
+                        event.driving_distance = (matrixResponse.distances[0][index] / 1000).toFixed(1); // calculating
+                    });
+
+                    events.sort(function (a, b) { // sorting by distance
+                        return a.driving_distance - b.driving_distance;
+                    });
+
+                    renderEvents(events, $('#events-container')); // refreshing shown events
+                }
+            }
+        });
+    });
 }
