@@ -14,11 +14,11 @@ const validator = require('validator'); // library for xss protection
 
 // GEMINI AI setup
 const { GoogleGenerativeAI } = require('@google/generative-ai');
-const GEMINI_API_KEY = '';
+const GEMINI_API_KEY = 'AIzaSyDG8IxQtQUx5kDflPtCsS9q4am4O5YGhJg';
 const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
 
 // weather setup
-const WEATHER_API_KEY = '';
+const WEATHER_API_KEY = '326db411d28629437ad03fa4cec5c062';
 const WEATHER_CITY = 'Heraklion, GR';
 const units = 'metric';
 
@@ -480,42 +480,65 @@ app.post('/api/ai-execute-filter', async (req, res) => {
 
     if (type === "events") {
         const SQL_SCHEMA = `
-Table: public_events (pe)
-Columns: event_id, band_id, event_type, event_datetime, event_city, event_address, event_description, participants_price, event_lat, event_lon
-Table: bands (b)
-Columns: band_id, band_name, music_genres
-Rules:
-- ALWAYS include JOIN bands b ON pe.band_id = b.band_id
-- SELECT: ALWAYS RETURN pe.*, b.band_name, b.music_genres
-- Filter for free events: pe.participants_price = 0
-- Ordering: ORDER BY pe.event_datetime ASC
-`;
-        systemInstructionText = `You are an expert SQL writer for MySQL. Your task is to convert the user's query into a SINGLE SELECT statement using the provided schema. The query must return ALL columns from public_events (aliased as pe) and the name and genres from bands (aliased as b). When filtering by city or genre, ALWAYS use the LIKE operator with trailing wildcards (e.g., 'pe.event_city LIKE "Heraklion%"'). ONLY return the raw SQL code, do NOT wrap it in any Markdown code blocks (like \`\`\`sql\`). SQL Schema: ${SQL_SCHEMA}. User Query: ${userPrompt}`;
+    Table: public_events (pe)
+    Columns: event_id, band_id, event_type, event_datetime, event_city, event_address, event_description, participants_price, event_lat, event_lon
+    Table: bands (b)
+    Columns: band_id, band_name, music_genres
+    Rules:
+    - ALWAYS include JOIN bands b ON pe.band_id = b.band_id
+    - SELECT: ALWAYS RETURN pe.*, b.band_name, b.music_genres
+    - IMPORTANT: For music_genres filtering, ALWAYS use LIKE with BOTH wildcards: b.music_genres LIKE "%Jazz%"
+    - The music_genres column contains comma-separated values (e.g., "Pop, Jazz, Rock")
+    - Filter for free events: pe.participants_price = 0
+    - Ordering: ORDER BY pe.event_datetime ASC
+    `;
+        systemInstructionText = `You are an expert SQL writer for MySQL. Your task is to convert the user's query into a SINGLE SELECT statement using the provided schema. The query must return ALL columns from public_events (aliased as pe) and the name and genres from bands (aliased as b). 
 
+    CRITICAL: When filtering by music genre, you MUST use the LIKE operator with BOTH wildcards like this: 'b.music_genres LIKE "%Jazz%"' because the music_genres column contains comma-separated values.
+
+    When filtering by city, use the LIKE operator with trailing wildcards (e.g., 'pe.event_city LIKE "Heraklion%"'). 
+
+    ONLY return the raw SQL code, do NOT wrap it in any Markdown code blocks (like \`\`\`sql\`). 
+
+    SQL Schema: ${SQL_SCHEMA}. 
+
+    User Query: ${userPrompt}`;
     } else if (type === "bands") {
         const SQL_SCHEMA = `
-Table: bands (b)
-Columns: band_id, username, email, band_name, music_genres, band_description, members_number, foundedYear, band_city, telephone, webpage, photo
-Rules:
-- SELECT: ALWAYS RETURN ALL columns (b.*).
-- Filter for establishment year: foundedYear >= [year]
-- Use LIKE for genres, band names, and descriptions.
-- Ordering: ORDER BY b.foundedYear ASC
-`;
-        systemInstructionText = `You are an expert SQL writer for MySQL. Your task is to convert the user's query into a SINGLE SELECT statement using the provided schema. The query must return ALL columns (b.*). When filtering by city or genre, ALWAYS use the LIKE operator with trailing wildcards (e.g., 'b.band_city LIKE "Heraklion%"'). ONLY return the raw SQL code, do NOT wrap it in any Markdown code blocks (like \`\`\`sql\`). SQL Schema: ${SQL_SCHEMA}. User Query: ${userPrompt}`;
+    Table: bands (b)
+    Columns: band_id, username, email, band_name, music_genres, band_description, members_number, foundedYear, band_city, telephone, webpage, photo
+    Rules:
+    - SELECT: ALWAYS RETURN ALL columns (b.*).
+    - Filter for establishment year: foundedYear >= [year]
+    - IMPORTANT: For music_genres filtering, ALWAYS use LIKE with BOTH leading and trailing wildcards: music_genres LIKE "%Jazz%"
+    - The music_genres column contains comma-separated values (e.g., "Pop, Jazz, Rock"), so you MUST use %genre% pattern
+    - Use LIKE for band names and descriptions with trailing wildcards.
+    - Ordering: ORDER BY b.foundedYear ASC
+    `;
+        systemInstructionText = `You are an expert SQL writer for MySQL. Your task is to convert the user's query into a SINGLE SELECT statement using the provided schema. The query must return ALL columns (b.*). 
+
+    CRITICAL: When filtering by music genre, you MUST use the LIKE operator with BOTH wildcards like this: 'b.music_genres LIKE "%Jazz%"' because the music_genres column contains comma-separated values.
+
+    When filtering by city or band name, use the LIKE operator with trailing wildcards (e.g., 'b.band_city LIKE "Heraklion%"'). 
+
+    ONLY return the raw SQL code, do NOT wrap it in any Markdown code blocks (like \`\`\`sql\`). 
+
+    SQL Schema: ${SQL_SCHEMA}. 
+
+    User Query: ${userPrompt}`;
     } else {
         return res.status(400).json({ success: false, error: 'Invalid filter type specified.' });
     }
 
     let sqlQuery;
     try {
-        const response = await ai.models.generateContent({
-            model: "gemini-2.5-flash",
-            contents: [{ role: "user", parts: [{ text: systemInstructionText }] }],
-            config: {}
+        const model = genAI.getGenerativeModel({
+            model: "gemini-2.5-flash"
         });
 
-        sqlQuery = response.text.trim();
+        const result = await model.generateContent(systemInstructionText);
+        sqlQuery = result.response.text().trim();
+        
         if (sqlQuery.startsWith("```")) { // AI models were adding many characters to the responses, so we need to get rid of them "just in case"
             sqlQuery = sqlQuery.replace(/```(sql|SQL)?\n?/i, '').trim();
         }
@@ -524,9 +547,10 @@ Rules:
         }
 
     } catch (error) {
+        console.error("Gemini API Error:", error);
         return res.status(500).json({
             success: false,
-            error: error.message
+            error: 'Error generating SQL query: ' + error.message
         });
     }
 
@@ -1076,7 +1100,7 @@ app.post('/api/getDrivingDistances', async (req, res) => {
     const settings = { // from https://rapidapi.com/trueway/api/trueway-matrix/
         method: 'GET',
         headers: {
-            'x-rapidapi-key': '',
+            'x-rapidapi-key': '6c6bf8d1e1mshc1ca0e713f01b86p1003bdjsn0e24e4fdb063',
             'x-rapidapi-host': 'trueway-matrix.p.rapidapi.com'
         }
     };
