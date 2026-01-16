@@ -14,11 +14,11 @@ const validator = require('validator'); // library for xss protection
 
 // GEMINI AI setup
 const { GoogleGenerativeAI } = require('@google/generative-ai');
-const GEMINI_API_KEY = 'AIzaSyDG8IxQtQUx5kDflPtCsS9q4am4O5YGhJg';
+const GEMINI_API_KEY = '';
 const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
 
 // weather setup
-const WEATHER_API_KEY = '326db411d28629437ad03fa4cec5c062';
+const WEATHER_API_KEY = '';
 const WEATHER_CITY = 'Heraklion, GR';
 const units = 'metric';
 
@@ -1100,7 +1100,7 @@ app.post('/api/getDrivingDistances', async (req, res) => {
     const settings = { // from https://rapidapi.com/trueway/api/trueway-matrix/
         method: 'GET',
         headers: {
-            'x-rapidapi-key': '6c6bf8d1e1mshc1ca0e713f01b86p1003bdjsn0e24e4fdb063',
+            'x-rapidapi-key': '',
             'x-rapidapi-host': 'trueway-matrix.p.rapidapi.com'
         }
     };
